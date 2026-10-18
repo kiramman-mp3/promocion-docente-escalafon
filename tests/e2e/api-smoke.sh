@@ -60,7 +60,7 @@ login() {
 }
 
 echo "== Esperando a la API en $API_URL"
-for _ in $(seq 1 60); do
+for _ in $(seq 1 90); do
     [[ "$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/api/roles")" == 200 ]] && break
     sleep 2
 done
