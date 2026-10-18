@@ -246,3 +246,24 @@ BEGIN
     );
 END
 GO
+
+-- Bitácora de auditoría (Reglamento DITIC art. 2: integridad y confiabilidad de la información).
+-- La API solo puede insertar: nadie modifica ni borra registros desde la aplicación.
+IF OBJECT_ID('dbo.Auditoria', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Auditoria (
+        Id         BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Auditoria PRIMARY KEY,
+        Fecha      DATETIME2 NOT NULL CONSTRAINT DF_Auditoria_Fecha DEFAULT SYSUTCDATETIME(),
+        UsuarioId  INT NULL,
+        Usuario    NVARCHAR(150) NULL,
+        Accion     NVARCHAR(100) NOT NULL,
+        Metodo     NVARCHAR(10) NOT NULL,
+        Ruta       NVARCHAR(300) NOT NULL,
+        Estado     INT NOT NULL,
+        Ip         NVARCHAR(45) NULL,
+        Detalle    NVARCHAR(2000) NULL
+    );
+    CREATE INDEX IX_Auditoria_Fecha ON dbo.Auditoria (Fecha DESC);
+    CREATE INDEX IX_Auditoria_Usuario ON dbo.Auditoria (UsuarioId, Fecha DESC);
+END
+GO

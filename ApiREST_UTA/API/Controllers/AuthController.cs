@@ -1,6 +1,7 @@
 ﻿using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ApiREST_UTA.API.Controllers
 {
@@ -17,6 +18,7 @@ namespace ApiREST_UTA.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting(Program.PoliticaLimiteLogin)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var result = await _authService.AutenticarAsync(request);

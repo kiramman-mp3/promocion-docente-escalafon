@@ -102,6 +102,7 @@ jobs:
             echo "APP_DB_PASSWORD=Ap$(openssl rand -hex 16)Bb2!"
             echo "JWT_KEY=$(openssl rand -hex 48)"
             echo "SEED_DATA=true"
+            echo "LOGIN_RATE_LIMIT=100"
           } > .env
 
       - name: Levantar SQL Server, API y frontend
@@ -109,6 +110,26 @@ jobs:
 
       - name: Prueba de punta a punta
         run: bash tests/e2e/api-smoke.sh
+
+      - name: Respaldo y verificación de la base
+        run: docker compose --profile operacion run --rm db-backup
+
+      # Escaneo de seguridad pasivo (Reglamento DITIC art. 23 f). -I: las advertencias no fallan el job
+      - name: OWASP ZAP (frontend y API)
+        run: |
+          mkdir -p zap && chmod 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:8080 -r zap-frontend.html -I
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-api-scan.py -t http://localhost:5270/swagger/v1/swagger.json -f openapi -r zap-api.html -I
+
+      - name: Publicar informes de seguridad
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seguridad-zap
+          path: zap/*.html
+          if-no-files-found: ignore
 
       - name: Logs de los contenedores
         if: failure()
