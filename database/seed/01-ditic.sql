@@ -14,7 +14,9 @@ BEGIN
         (N'rrhh@uta.edu.ec',         @hash, N'Paola',         N'Sánchez',        N'RRHH',          NULL),
         (N'ana.perez@uta.edu.ec',    @hash, N'Ana María',     N'Pérez Villacís', N'Docente',       '1801234567'),
         (N'carlos.gomez@uta.edu.ec', @hash, N'Carlos Andrés', N'Gómez Lalama',   N'Docente',       '1809876543'),
-        (N'lucia.mora@uta.edu.ec',   @hash, N'Lucía Fernanda', N'Mora Andrade',  N'Docente',       '1712345678');
+        (N'lucia.mora@uta.edu.ec',   @hash, N'Lucía Fernanda', N'Mora Andrade',  N'Docente',       '1712345678'),
+        (N'jorge.ruiz@uta.edu.ec',   @hash, N'Jorge Patricio', N'Ruiz Naranjo',  N'Docente',       '1805555555'),
+        (N'marta.villacres@uta.edu.ec', @hash, N'Marta Cecilia', N'Villacrés Paredes', N'Docente', '1701111111');
 END
 GO
 
