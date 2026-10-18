@@ -1,9 +1,21 @@
 import { useState, type FormEvent } from "react";
 import { iniciarSesion } from "../api";
-import type { Sesion } from "../types";
+import type { RolEscalafon, Sesion } from "../types";
 import { Escalafon } from "./Escalafon";
 
-export function Login({ onSesion }: { onSesion: (s: Sesion) => void }) {
+interface Props {
+  roles: RolEscalafon[];
+  errorRoles: string | null;
+  onSesion: (s: Sesion) => void;
+}
+
+const USUARIOS_DE_PRUEBA = [
+  { correo: "ana.perez@uta.edu.ec", rol: "Docente" },
+  { correo: "rrhh@uta.edu.ec", rol: "RRHH" },
+  { correo: "admin@uta.edu.ec", rol: "Administrador" },
+];
+
+export function Login({ roles, errorRoles, onSesion }: Props) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,16 +37,22 @@ export function Login({ onSesion }: { onSesion: (s: Sesion) => void }) {
   return (
     <main className="login">
       <div className="login__escalera" aria-hidden="true">
-        <Escalafon />
+        <Escalafon roles={roles} />
       </div>
 
       <div className="login__contenido">
         <p className="marca">Universidad Técnica de Ambato</p>
         <h1 className="login__titulo">Promoción docente</h1>
         <p className="login__intro">
-          Revisa si un docente cumple los requisitos para subir al siguiente rol del escalafón, con los
-          documentos de RRHH, DIDE, DEaDV y DAC en un solo expediente.
+          Los docentes revisan su expediente y solicitan su promoción. RRHH aprueba cada documento y decide la
+          solicitud. Todos ingresan con su correo institucional.
         </p>
+
+        {errorRoles && (
+          <p className="alerta" role="alert">
+            {errorRoles}
+          </p>
+        )}
 
         <form className="formulario" onSubmit={enviar} noValidate>
           <label className="campo">
@@ -71,9 +89,26 @@ export function Login({ onSesion }: { onSesion: (s: Sesion) => void }) {
         </form>
 
         {import.meta.env.DEV && (
-          <p className="login__ayuda">
-            Entorno de desarrollo: usa <strong>ana.perez@uta.edu.ec</strong> con la contraseña <strong>Uta2026*</strong>.
-          </p>
+          <div className="login__ayuda">
+            <p>Entorno de desarrollo, contraseña <strong>Uta2026*</strong>:</p>
+            <ul>
+              {USUARIOS_DE_PRUEBA.map((u) => (
+                <li key={u.correo}>
+                  <button
+                    type="button"
+                    className="boton-texto"
+                    onClick={() => {
+                      setCorreo(u.correo);
+                      setContrasena("Uta2026*");
+                    }}
+                  >
+                    {u.correo}
+                  </button>{" "}
+                  ({u.rol})
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </main>

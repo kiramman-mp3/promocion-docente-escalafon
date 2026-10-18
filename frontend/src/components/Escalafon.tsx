@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ESCALAFON } from "../roles";
+import type { RolEscalafon } from "../types";
 
 interface Props {
+  roles: RolEscalafon[];
   rolActualId?: number;
   // true cuando el dictamen confirma que cumple todos los requisitos
   alcanzaObjetivo?: boolean;
@@ -9,8 +10,8 @@ interface Props {
 
 const ALTO_PELDANO = 56;
 
-export function Escalafon({ rolActualId, alcanzaObjetivo = false }: Props) {
-  const objetivoId = rolActualId && rolActualId < ESCALAFON.length ? rolActualId + 1 : undefined;
+export function Escalafon({ roles, rolActualId, alcanzaObjetivo = false }: Props) {
+  const objetivoId = rolActualId && rolActualId < Math.max(...roles.map((r) => r.id)) ? rolActualId + 1 : undefined;
 
   // El riel se rellena hasta el rol actual y, si cumple, sube al objetivo después de un instante.
   const [subido, setSubido] = useState(false);
@@ -23,7 +24,7 @@ export function Escalafon({ rolActualId, alcanzaObjetivo = false }: Props) {
 
   const nivelRelleno = rolActualId ? (subido && objetivoId ? objetivoId : rolActualId) : 0;
   const altoRelleno = nivelRelleno ? (nivelRelleno - 1) * ALTO_PELDANO : 0;
-  const peldanos = [...ESCALAFON].reverse();
+  const peldanos = [...roles].sort((a, b) => b.id - a.id);
 
   return (
     <nav className="escalafon" aria-label="Escalafón docente">

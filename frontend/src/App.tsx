@@ -1,7 +1,15 @@
-import { useState } from "react";
-import { Consulta } from "./components/Consulta";
+import { useEffect, useMemo, useState } from "react";
+import { listarRoles } from "./api";
+import { Cabecera, seccionesDe } from "./components/Cabecera";
 import { Login } from "./components/Login";
-import type { Sesion } from "./types";
+import { enlace, useRuta, type Ruta } from "./ruta";
+import { ProveedorSesion } from "./sesion";
+import type { RolEscalafon, Sesion } from "./types";
+import { Consulta } from "./vistas/Consulta";
+import { MiExpediente } from "./vistas/MiExpediente";
+import { SolicitudDetalle } from "./vistas/SolicitudDetalle";
+import { Solicitudes } from "./vistas/Solicitudes";
+import { Usuarios } from "./vistas/Usuarios";
 
 const CLAVE_SESION = "promocion-docente:sesion";
 
@@ -9,14 +17,41 @@ const CLAVE_SESION = "promocion-docente:sesion";
 function leerSesion(): Sesion | null {
   try {
     const guardada = sessionStorage.getItem(CLAVE_SESION);
-    return guardada ? (JSON.parse(guardada) as Sesion) : null;
+    const sesion = guardada ? (JSON.parse(guardada) as Sesion) : null;
+    return sesion?.rol ? sesion : null;
   } catch {
     return null;
   }
 }
 
+// Qué vistas puede abrir cada rol (la API vuelve a validar los permisos)
+function permitida(ruta: Ruta, sesion: Sesion) {
+  switch (ruta.vista) {
+    case "expediente":
+      return sesion.rol === "Docente";
+    case "consulta":
+      return sesion.rol !== "Docente";
+    case "usuarios":
+      return sesion.rol === "Administrador";
+    case "solicitudes":
+    case "solicitud":
+      return true;
+    default:
+      return false;
+  }
+}
+
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion);
+  const [roles, setRoles] = useState<RolEscalafon[]>([]);
+  const [errorRoles, setErrorRoles] = useState<string | null>(null);
+  const ruta = useRuta();
+
+  useEffect(() => {
+    listarRoles()
+      .then(setRoles)
+      .catch((e) => setErrorRoles(e instanceof Error ? e.message : "No se pudo cargar el escalafón."));
+  }, []);
 
   function guardar(nueva: Sesion | null) {
     try {
@@ -26,7 +61,42 @@ export default function App() {
       /* almacenamiento no disponible: la sesión dura lo que dure la página */
     }
     setSesion(nueva);
+    if (!nueva) window.location.hash = "";
   }
 
-  return sesion ? <Consulta sesion={sesion} onSalir={() => guardar(null)} /> : <Login onSesion={guardar} />;
+  // Cada rol aterriza en su primera sección; rutas no permitidas también vuelven ahí
+  useEffect(() => {
+    if (sesion && !permitida(ruta, sesion)) {
+      window.location.replace(enlace(seccionesDe(sesion.rol)[0].ruta));
+    }
+  }, [ruta, sesion]);
+
+  const contexto = useMemo(
+    () => (sesion ? { sesion, roles, salir: () => guardar(null) } : null),
+    [sesion, roles],
+  );
+
+  if (!sesion || !contexto) return <Login roles={roles} errorRoles={errorRoles} onSesion={guardar} />;
+
+  return (
+    <ProveedorSesion valor={contexto}>
+      <div className="app">
+        <Cabecera ruta={ruta} />
+        {errorRoles && (
+          <p className="alerta alerta--pagina" role="alert">
+            {errorRoles}
+          </p>
+        )}
+        {permitida(ruta, sesion) && (
+          <>
+            {ruta.vista === "expediente" && <MiExpediente />}
+            {ruta.vista === "consulta" && <Consulta />}
+            {ruta.vista === "solicitudes" && <Solicitudes />}
+            {ruta.vista === "solicitud" && <SolicitudDetalle id={ruta.id} />}
+            {ruta.vista === "usuarios" && <Usuarios />}
+          </>
+        )}
+      </div>
+    </ProveedorSesion>
+  );
 }
