@@ -1,0 +1,22 @@
+name: Proponer una mejora
+description: Una funcionalidad nueva o un cambio en una regla de negocio
+labels: [enhancement]
+body:
+  - type: textarea
+    id: necesidad
+    attributes:
+      label: Qué necesidad resuelve
+      description: Quién la tiene (docente, RRHH, administrador) y en qué momento del proceso.
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Cómo debería funcionar. Si cambia una regla del reglamento, cita el artículo.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
