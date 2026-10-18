@@ -16,7 +16,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         public async Task<TiempoRolResponse?> ObtenerTiempoRolPorCedulaAsync(string cedula)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("SELECT Cedula, RolActual, FechaInicio, Pdf FROM TiempoRol WHERE Cedula = @cedula", connection);
+            var command = new SqlCommand("SELECT Id, Cedula, RolActual, FechaInicio, Pdf FROM TiempoRol WHERE Cedula = @cedula", connection);
             command.Parameters.AddWithValue("@cedula", cedula);
 
             await connection.OpenAsync();
@@ -26,6 +26,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 return new TiempoRolResponse
                 {
+                    Id = Convert.ToInt32(reader["Id"]),
                     Cedula = reader["Cedula"].ToString()!,
                     RolActual = reader["RolActual"].ToString()!,
                     FechaInicio = Convert.ToDateTime(reader["FechaInicio"]),

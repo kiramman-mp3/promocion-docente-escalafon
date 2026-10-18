@@ -19,7 +19,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             var obras = new List<ObraResponse>();
 
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("SELECT Cedula, FechaPublicacion, NombreRevista, Pdf FROM Obras WHERE Cedula = @cedula AND FechaPublicacion >= @fechaInicio", connection);
+            var command = new SqlCommand("SELECT Id, Cedula, FechaPublicacion, NombreRevista, Pdf FROM Obras WHERE Cedula = @cedula AND FechaPublicacion >= @fechaInicio", connection);
             command.Parameters.AddWithValue("@cedula", cedula);
             command.Parameters.AddWithValue("@fechaInicio", fechaInicio);
 
@@ -30,6 +30,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 obras.Add(new ObraResponse
                 {
+                    Id = Convert.ToInt32(reader["Id"]),
                     Cedula = reader["Cedula"].ToString()!,
                     FechaPublicacion = Convert.ToDateTime(reader["FechaPublicacion"]),
                     NombreRevista = reader["NombreRevista"].ToString()!,

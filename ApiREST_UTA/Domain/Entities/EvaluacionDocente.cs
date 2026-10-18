@@ -2,6 +2,7 @@
 {
     public class EvaluacionDocente
     {
+        public int Id { get; set; }
         public string Cedula { get; set; }
         public DateTime Periodo { get; set; }
         public string Universidad { get; set; }

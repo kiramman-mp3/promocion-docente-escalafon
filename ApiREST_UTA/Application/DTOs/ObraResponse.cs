@@ -2,6 +2,7 @@
 {
     public class ObraResponse
     {
+        public int Id { get; set; }
         public string Cedula { get; set; }
         public DateTime FechaPublicacion { get; set; }
         public string NombreRevista { get; set; }

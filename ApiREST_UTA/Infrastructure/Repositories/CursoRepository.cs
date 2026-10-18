@@ -18,7 +18,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             var cursos = new List<CursoCapacitacion>();
 
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("SELECT Cedula, Universidad, Facultad, FechaEvaluacion, Puntaje FROM CursosCapacitacion WHERE Cedula = @cedula", connection);
+            var command = new SqlCommand("SELECT Id, Cedula, Universidad, Facultad, FechaEvaluacion, Puntaje FROM CursosCapacitacion WHERE Cedula = @cedula", connection);
             command.Parameters.AddWithValue("@cedula", cedula);
 
             await connection.OpenAsync();
@@ -28,6 +28,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 cursos.Add(new CursoCapacitacion
                 {
+                    Id = Convert.ToInt32(reader["Id"]),
                     Cedula = reader["Cedula"].ToString()!,
                     Universidad = reader["Universidad"].ToString()!,
                     Facultad = reader["Facultad"].ToString()!,
