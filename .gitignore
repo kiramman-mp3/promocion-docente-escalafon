@@ -1,0 +1,62 @@
+# ---------- Secretos / entorno ----------
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+appsettings.*.local.json
+secrets.json
+
+# ---------- .NET / Visual Studio ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.cache
+*.vsidx
+*.nupkg
+*.snupkg
+project.lock.json
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+.idea/
+*.DotSettings.user
+launchSettings.local.json
+
+# ---------- Node / Frontend ----------
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- Docker / datos locales ----------
+docker/data/
+*.mdf
+*.ldf
+*.bak
+
+# ---------- Sistema / editores ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.log
