@@ -30,7 +30,9 @@ namespace ApiREST_UTA.Infrastructure.Repositories
                     Contrasena = reader["Contrasena"].ToString()!,
                     Nombre = reader["Nombre"].ToString()!,
                     Apellido = reader["Apellido"].ToString()!,
-                    Rol = reader["Rol"].ToString()!
+                    Rol = reader["Rol"].ToString()!,
+                    Cedula = reader["Cedula"] == DBNull.Value ? null : reader["Cedula"].ToString(),
+                    Activo = Convert.ToBoolean(reader["Activo"])
                 };
             }
             return null;
