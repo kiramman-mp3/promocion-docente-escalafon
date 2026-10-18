@@ -2,6 +2,11 @@
 using ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Infrastructure.Repositories;
 using ApiREST_UTA.Infrastructure.Documentos;
+using ApiREST_UTA.API.Filters;
+using ApiREST_UTA.Infrastructure.Salud;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -13,6 +18,7 @@ namespace ApiREST_UTA
     public class Program
     {
         private const string PoliticaCorsFrontend = "Frontend";
+        public const string PoliticaLimiteLogin = "login";
 
         public static void Main(string[] args)
         {
@@ -90,7 +96,28 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<AuthService>(sp =>
                 new AuthService(sp.GetRequiredService<IUsuarioRepository>(), sp.GetRequiredService<IComisionRepository>(), jwtKey));
 
-            builder.Services.AddControllers();
+            // Bitácora de auditoría de todas las operaciones de escritura (Reglamento DITIC art. 2)
+            builder.Services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();
+            builder.Services.AddControllers(options => options.Filters.Add<AuditoriaFilter>());
+
+            // Disponibilidad de las bases para el monitoreo (GET /health)
+            builder.Services.AddHealthChecks().AddCheck<SqlServerHealthCheck>("sqlserver");
+
+            // Límite de intentos de inicio de sesión por IP (LOGIN_RATE_LIMIT por minuto, 10 por defecto)
+            var intentosLogin = builder.Configuration.GetValue("LOGIN_RATE_LIMIT", 10);
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.OnRejected = async (contexto, cancelacion) =>
+                {
+                    contexto.HttpContext.Response.Headers.RetryAfter = "60";
+                    await contexto.HttpContext.Response.WriteAsJsonAsync(
+                        new { mensaje = "Demasiados intentos de inicio de sesión. Espera un minuto e intenta de nuevo." }, cancelacion);
+                };
+                options.AddPolicy(PoliticaLimiteLogin, contexto => RateLimitPartition.GetFixedWindowLimiter(
+                    contexto.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+                    _ => new FixedWindowRateLimiterOptions { PermitLimit = intentosLogin, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            });
 
             // CORS: orígenes permitidos separados por coma en CORS_ORIGINS (por defecto el frontend de Vite)
             var origenesPermitidos = (builder.Configuration["CORS_ORIGINS"] ?? "http://localhost:5173")
@@ -116,6 +143,19 @@ namespace ApiREST_UTA
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
                         IssuerSigningKey = signingKey
+                    };
+
+                    // Un usuario desactivado pierde el acceso de inmediato, aunque su token siga vigente
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnTokenValidated = async contexto =>
+                        {
+                            var id = contexto.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                            var usuarios = contexto.HttpContext.RequestServices.GetRequiredService<IUsuarioRepository>();
+                            var usuario = int.TryParse(id, out var usuarioId) ? await usuarios.ObtenerPorIdAsync(usuarioId) : null;
+                            if (usuario == null || !usuario.Activo)
+                                contexto.Fail("El usuario fue desactivado.");
+                        }
                     };
                 });
 
@@ -158,10 +198,29 @@ namespace ApiREST_UTA
             }
 
             app.UseCors(PoliticaCorsFrontend);
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
+            app.MapHealthChecks("/health", new HealthCheckOptions
+            {
+                ResponseWriter = async (contexto, informe) =>
+                {
+                    contexto.Response.ContentType = "application/json";
+                    await contexto.Response.WriteAsJsonAsync(new
+                    {
+                        estado = informe.Status.ToString(),
+                        duracionMs = (int)informe.TotalDuration.TotalMilliseconds,
+                        componentes = informe.Entries.ToDictionary(e => e.Key, e => new
+                        {
+                            estado = e.Value.Status.ToString(),
+                            descripcion = e.Value.Description,
+                            bases = e.Value.Data
+                        })
+                    });
+                }
+            });
 
             app.Run();
         }
