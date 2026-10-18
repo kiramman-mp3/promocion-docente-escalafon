@@ -1,6 +1,5 @@
 ﻿using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Interfaces;
-using ApiREST_UTA.Domain.Interfaces.ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Infrastructure.Repositories;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -67,6 +66,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<ICapacitacionImpartidaRepository, CapacitacionImpartidaRepository>();
             builder.Services.AddScoped<ISolicitudRepository, SolicitudRepository>();
             builder.Services.AddScoped<IRequisitoRepository, RequisitoRepository>();
+            builder.Services.AddScoped<IEquivalenciaRepository, EquivalenciaRepository>();
 
             // Inyección de servicios
             builder.Services.AddScoped<ObraService>();
