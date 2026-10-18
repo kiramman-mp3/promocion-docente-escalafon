@@ -9,7 +9,8 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         private const string SelectSolicitud = @"
             SELECT s.Id, s.Cedula, s.RolActualId, s.RolActual, s.RolObjetivo, s.Estado,
                    s.SolicitadoPorId, CONCAT(us.Nombre, ' ', us.Apellido) AS SolicitadoPor, s.FechaSolicitud,
-                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion
+                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion,
+                   s.RequisitosPromocionId, s.DictamenJson
             FROM SolicitudesPromocion s
             JOIN Usuarios us ON us.Id = s.SolicitadoPorId
             LEFT JOIN Usuarios ur ON ur.Id = s.ResueltoPorId";
@@ -25,14 +26,16 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-                INSERT INTO SolicitudesPromocion (Cedula, RolActualId, RolActual, RolObjetivo, SolicitadoPorId)
+                INSERT INTO SolicitudesPromocion (Cedula, RolActualId, RolActual, RolObjetivo, SolicitadoPorId, RequisitosPromocionId, DictamenJson)
                 OUTPUT INSERTED.Id
-                VALUES (@cedula, @rolActualId, @rolActual, @rolObjetivo, @solicitadoPorId)", connection);
+                VALUES (@cedula, @rolActualId, @rolActual, @rolObjetivo, @solicitadoPorId, @requisitosId, @dictamen)", connection);
             command.Parameters.AddWithValue("@cedula", solicitud.Cedula);
             command.Parameters.AddWithValue("@rolActualId", solicitud.RolActualId);
             command.Parameters.AddWithValue("@rolActual", solicitud.RolActual);
             command.Parameters.AddWithValue("@rolObjetivo", solicitud.RolObjetivo);
             command.Parameters.AddWithValue("@solicitadoPorId", solicitud.SolicitadoPorId);
+            command.Parameters.AddWithValue("@requisitosId", (object?)solicitud.RequisitosPromocionId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@dictamen", (object?)solicitud.DictamenJson ?? DBNull.Value);
 
             await connection.OpenAsync();
             return Convert.ToInt32(await command.ExecuteScalarAsync());
@@ -171,7 +174,9 @@ namespace ApiREST_UTA.Infrastructure.Repositories
                 ResueltoPorId = reader["ResueltoPorId"] == DBNull.Value ? null : Convert.ToInt32(reader["ResueltoPorId"]),
                 ResueltoPor = reader["ResueltoPorId"] == DBNull.Value ? null : reader["ResueltoPor"].ToString(),
                 FechaResolucion = reader["FechaResolucion"] == DBNull.Value ? null : ComoUtc(reader["FechaResolucion"]),
-                Observacion = reader["Observacion"] == DBNull.Value ? null : reader["Observacion"].ToString()
+                Observacion = reader["Observacion"] == DBNull.Value ? null : reader["Observacion"].ToString(),
+                RequisitosPromocionId = reader["RequisitosPromocionId"] == DBNull.Value ? null : Convert.ToInt32(reader["RequisitosPromocionId"]),
+                DictamenJson = reader["DictamenJson"] == DBNull.Value ? null : reader["DictamenJson"].ToString()
             };
         }
     }

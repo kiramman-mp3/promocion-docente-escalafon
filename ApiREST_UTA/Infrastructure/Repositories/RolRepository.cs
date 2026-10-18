@@ -22,8 +22,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-            SELECT TOP 1 Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion, 
-                         RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+            SELECT TOP 1 Id, Nombre,
                    Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             WHERE Id > @rolActualId
@@ -44,8 +43,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-            SELECT Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion,
-                   RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+            SELECT Id, Nombre,
                    Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             WHERE Nombre = @nombre", connection);
@@ -67,8 +65,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             var roles = new List<Rol>();
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-            SELECT Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion,
-                   RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+            SELECT Id, Nombre,
                    Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             ORDER BY Id ASC", connection);
@@ -87,11 +84,6 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 Id = Convert.ToInt32(reader["Id"]),
                 Nombre = reader["Nombre"].ToString()!,
-                RequiereAniosEnRol = Convert.ToInt32(reader["RequiereAniosEnRol"]),
-                RequiereObras = Convert.ToInt32(reader["RequiereObras"]),
-                RequiereEvaluacion = Convert.ToDecimal(reader["RequiereEvaluacion"]),
-                RequiereCapacitacionHoras = Convert.ToInt32(reader["RequiereCapacitacionHoras"]),
-                RequiereInvestigacionMeses = Convert.ToInt32(reader["RequiereInvestigacionMeses"]),
                 Categoria = reader["Categoria"] == DBNull.Value ? null : reader["Categoria"].ToString(),
                 Nivel = reader["Nivel"] == DBNull.Value ? null : Convert.ToInt32(reader["Nivel"]),
                 Grado = reader["Grado"] == DBNull.Value ? null : Convert.ToInt32(reader["Grado"]),

@@ -1,7 +1,9 @@
 using ApiREST_UTA.Application.DTOs;
+using ApiREST_UTA.Application.Services.Promocion;
 using ApiREST_UTA.Domain.Entities;
 using ApiREST_UTA.Domain.Interfaces;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace ApiREST_UTA.Application.Services
 {
@@ -9,44 +11,52 @@ namespace ApiREST_UTA.Application.Services
     // cada documento del expediente y luego aprueba o rechaza la solicitud.
     public class SolicitudService
     {
-        private readonly ISolicitudRepository _solicitudRepo;
-        private readonly IRRHHRepository _rrhhRepo;
-        private readonly IRolRepository _rolRepo;
+        private static readonly JsonSerializerOptions JsonWeb = new(JsonSerializerDefaults.Web);
 
-        public SolicitudService(ISolicitudRepository solicitudRepo, IRRHHRepository rrhhRepo, IRolRepository rolRepo)
+        private readonly ISolicitudRepository _solicitudRepo;
+        private readonly PromocionService _promocion;
+
+        public SolicitudService(ISolicitudRepository solicitudRepo, PromocionService promocion)
         {
             _solicitudRepo = solicitudRepo;
-            _rrhhRepo = rrhhRepo;
-            _rolRepo = rolRepo;
+            _promocion = promocion;
         }
 
         public async Task<SolicitudResponse> CrearAsync(string cedula, ClaimsPrincipal usuario)
         {
             cedula = cedula.Trim();
-            var tiempo = await _rrhhRepo.ObtenerTiempoRolPorCedulaAsync(cedula)
-                ?? throw ReglaNegocioException.NoEncontrado($"RRHH no tiene registrada la cédula {cedula}.");
+            var dictamen = await _promocion.EvaluarAsync(cedula);
 
-            var rolActual = await _rolRepo.ObtenerPorNombre(tiempo.RolActual)
-                ?? throw ReglaNegocioException.Invalido($"El rol \"{tiempo.RolActual}\" no está en el escalafón.");
-            var rolObjetivo = await _rolRepo.BuscarSiguienteRol(rolActual.Id)
-                ?? throw ReglaNegocioException.Invalido($"{rolActual.Nombre} es el último rol del escalafón.");
+            // CES art. 76: Agregado 3 y Principal 3 no tienen promoción
+            if (!dictamen.Promocionable)
+                throw ReglaNegocioException.Invalido(dictamen.Requisito(ReglaGradoPromocionable.Codigo)!.Detalle);
+            if (dictamen.RequisitosId == null)
+                throw ReglaNegocioException.Conflicto($"No hay requisitos vigentes para promover desde {dictamen.RolActual}.");
+
+            // CES art. 99: se solicita después de cumplir la permanencia mínima en el grado
+            var permanencia = dictamen.Requisito(ReglaPermanencia.Codigo)!;
+            if (!permanencia.Cumple)
+                throw ReglaNegocioException.Invalido(
+                    $"Todavía no cumple la permanencia mínima para solicitar la promoción: tiene {permanencia.Obtenido} y se exigen {permanencia.Requerido} (CES art. 99).");
 
             if (await _solicitudRepo.ExistePendienteAsync(cedula))
-                throw ReglaNegocioException.Conflicto("Ya hay una solicitud pendiente para esta cédula.");
+                throw ReglaNegocioException.Conflicto("Ya hay una solicitud en trámite para esta cédula.");
 
             // RRHH es una base externa: tras aprobar, el rol actual no cambia hasta que RRHH lo actualice
             var aprobadas = await _solicitudRepo.ListarAsync(SolicitudPromocion.Aprobada, cedula);
-            if (aprobadas.Any(s => s.RolObjetivo == rolObjetivo.Nombre))
+            if (aprobadas.Any(s => s.RolObjetivo == dictamen.RolObjetivo))
                 throw ReglaNegocioException.Conflicto(
-                    $"La promoción a {rolObjetivo.Nombre} ya fue aprobada; falta que RRHH registre el nuevo rol.");
+                    $"La promoción a {dictamen.RolObjetivo} ya fue aprobada; falta que RRHH registre el nuevo rol.");
 
             var id = await _solicitudRepo.CrearAsync(new SolicitudPromocion
             {
                 Cedula = cedula,
-                RolActualId = rolActual.Id,
-                RolActual = rolActual.Nombre,
-                RolObjetivo = rolObjetivo.Nombre,
-                SolicitadoPorId = usuario.Id()
+                RolActualId = dictamen.RolActualId,
+                RolActual = dictamen.RolActual,
+                RolObjetivo = dictamen.RolObjetivo!,
+                SolicitadoPorId = usuario.Id(),
+                RequisitosPromocionId = dictamen.RequisitosId,
+                DictamenJson = JsonSerializer.Serialize(dictamen, JsonWeb)
             });
 
             return (await ObtenerAsync(id, usuario))!;

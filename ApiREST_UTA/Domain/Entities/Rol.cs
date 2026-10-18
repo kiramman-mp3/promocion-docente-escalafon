@@ -14,12 +14,5 @@
 
         // Falso en el grado 5 (se pasa a Principal 1 por concurso) y en el 8 (último grado)
         public bool Promocionable { get; set; }
-
-        // Columnas heredadas del primer modelo; las reemplaza RequisitoPromocion
-        public int RequiereAniosEnRol { get; set; }
-        public int RequiereObras { get; set; }
-        public decimal RequiereEvaluacion { get; set; }
-        public int RequiereCapacitacionHoras { get; set; }
-        public int RequiereInvestigacionMeses { get; set; }
     }
 }

@@ -15,15 +15,15 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Roles)
 BEGIN
-    INSERT INTO dbo.Roles (Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion, RequiereCapacitacionHoras, RequiereInvestigacionMeses) VALUES
-        (1, N'Auxiliar 1',  0, 0, 0, 0, 0),
-        (2, N'Auxiliar 2',  0, 0, 0, 0, 0),
-        (3, N'Agregado 1',  0, 0, 0, 0, 0),
-        (4, N'Agregado 2',  0, 0, 0, 0, 0),
-        (5, N'Agregado 3',  0, 0, 0, 0, 0),
-        (6, N'Principal 1', 0, 0, 0, 0, 0),
-        (7, N'Principal 2', 0, 0, 0, 0, 0),
-        (8, N'Principal 3', 0, 0, 0, 0, 0);
+    INSERT INTO dbo.Roles (Id, Nombre) VALUES
+        (1, N'Auxiliar 1'),
+        (2, N'Auxiliar 2'),
+        (3, N'Agregado 1'),
+        (4, N'Agregado 2'),
+        (5, N'Agregado 3'),
+        (6, N'Principal 1'),
+        (7, N'Principal 2'),
+        (8, N'Principal 3');
 END
 GO
 
