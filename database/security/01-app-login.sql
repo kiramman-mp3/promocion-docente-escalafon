@@ -44,4 +44,5 @@ GRANT INSERT, UPDATE ON dbo.RequisitosPromocion TO [$(APP_DB_USER)];
 GRANT INSERT ON dbo.EvidenciasSolicitud TO [$(APP_DB_USER)];
 GRANT INSERT, UPDATE ON dbo.ComisionMiembros TO [$(APP_DB_USER)];
 GRANT INSERT, UPDATE ON dbo.VotosComision TO [$(APP_DB_USER)];
+GRANT INSERT, UPDATE ON dbo.Apelaciones TO [$(APP_DB_USER)];
 GO

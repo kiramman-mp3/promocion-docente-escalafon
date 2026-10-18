@@ -25,6 +25,7 @@ namespace ApiREST_UTA.Application.Services
         private readonly IEvidenciaRepository _evidencias;
         private readonly IGeneradorActo _actos;
         private readonly IUsuarioRepository _usuarios;
+        private readonly IApelacionRepository _apelaciones;
 
         public SolicitudService(
             ISolicitudRepository solicitudRepo,
@@ -33,7 +34,8 @@ namespace ApiREST_UTA.Application.Services
             IInvestigacionRepository investigaciones,
             IEvidenciaRepository evidencias,
             IGeneradorActo actos,
-            IUsuarioRepository usuarios)
+            IUsuarioRepository usuarios,
+            IApelacionRepository apelaciones)
         {
             _solicitudRepo = solicitudRepo;
             _promocion = promocion;
@@ -42,6 +44,7 @@ namespace ApiREST_UTA.Application.Services
             _evidencias = evidencias;
             _actos = actos;
             _usuarios = usuarios;
+            _apelaciones = apelaciones;
         }
 
         public async Task<SolicitudResponse> CrearAsync(string cedula, ClaimsPrincipal usuario)
@@ -132,6 +135,14 @@ namespace ApiREST_UTA.Application.Services
                 response.Votos = votos.Select(AResponse).ToList();
             if (solicitud.LlegoAComision)
                 response.Votacion = await VotacionAsync(solicitud, votos, miembro);
+
+            var apelacion = await _apelaciones.ObtenerPorSolicitudAsync(id);
+            response.Apelacion = apelacion == null ? null : AResponse(apelacion);
+            if (solicitud.Estado == SolicitudPromocion.Rechazada && apelacion == null && solicitud.FechaResolucion.HasValue)
+            {
+                response.PlazoApelacionHasta = Apelacion.PlazoHasta(solicitud.FechaResolucion.Value);
+                response.PuedeApelar = usuario.CedulaPropia() == solicitud.Cedula && DateTime.Today <= response.PlazoApelacionHasta;
+            }
 
             return response;
         }
@@ -313,6 +324,61 @@ namespace ApiREST_UTA.Application.Services
             return (await ObtenerAsync(id, usuario))!;
         }
 
+        // El docente apela la resolución que negó su promoción (COA arts. 217 y 224)
+        public async Task<SolicitudResponse> ApelarAsync(int id, ApelarRequest request, ClaimsPrincipal usuario)
+        {
+            var solicitud = await ObtenerEnEstadoAsync(id, SolicitudPromocion.Rechazada);
+            if (usuario.CedulaPropia() != solicitud.Cedula)
+                throw ReglaNegocioException.Prohibido("Solo el docente afectado puede apelar la resolución.");
+            if (await _apelaciones.ObtenerPorSolicitudAsync(id) != null)
+                throw ReglaNegocioException.Conflicto("Esta resolución ya fue apelada y la decisión es definitiva en vía administrativa.");
+            if (string.IsNullOrWhiteSpace(request.Fundamentos))
+                throw ReglaNegocioException.Invalido("Expón los fundamentos de la apelación.");
+
+            var plazo = Apelacion.PlazoHasta(solicitud.FechaResolucion ?? DateTime.UtcNow);
+            if (DateTime.Today > plazo)
+                throw ReglaNegocioException.Conflicto($"El término para apelar venció el {plazo:dd/MM/yyyy} (COA art. 224: diez días).");
+
+            if (!await _apelaciones.PresentarAsync(new Apelacion
+            {
+                SolicitudId = id,
+                Fundamentos = request.Fundamentos.Trim(),
+                PresentadaPorId = usuario.Id()
+            }))
+                throw ReglaNegocioException.Conflicto("La solicitud cambió de estado mientras se presentaba la apelación.");
+
+            return (await ObtenerAsync(id, usuario))!;
+        }
+
+        // El Administrador registra lo que resolvió el Honorable Consejo Universitario; la decisión es definitiva
+        public async Task<SolicitudResponse> ResolverApelacionAsync(int id, ResolverApelacionRequest request, ClaimsPrincipal usuario)
+        {
+            var solicitud = await ObtenerEnEstadoAsync(id, SolicitudPromocion.Apelada);
+            if (string.IsNullOrWhiteSpace(request.ResolucionHCU))
+                throw ReglaNegocioException.Invalido("Indica el número de la resolución del Consejo Universitario.");
+            if (string.IsNullOrWhiteSpace(request.Motivacion))
+                throw ReglaNegocioException.Invalido("Escribe la motivación de la resolución (Código Orgánico Administrativo, art. 100).");
+
+            var resolucion = request.ResolucionHCU.Trim();
+            var motivacion = request.Motivacion.Trim();
+            if (!await _apelaciones.ResolverAsync(id, request.Aceptada ? Apelacion.Aceptada : Apelacion.Negada, resolucion, motivacion, usuario.Id()))
+                throw ReglaNegocioException.Conflicto("La apelación ya fue resuelta.");
+
+            if (request.Aceptada)
+            {
+                await ResolverAsync(solicitud, SolicitudPromocion.Apelada, SolicitudPromocion.Aprobada,
+                    $"Apelación aceptada por el Consejo Universitario (resolución {resolucion}): {motivacion}", usuario);
+                await GenerarActoAsync(id, resolucion, motivacion);
+            }
+            else
+            {
+                await ResolverAsync(solicitud, SolicitudPromocion.Apelada, SolicitudPromocion.Rechazada,
+                    $"{solicitud.Observacion} Apelación negada por el Consejo Universitario (resolución {resolucion}): {motivacion}".Trim(), usuario);
+            }
+
+            return (await ObtenerAsync(id, usuario))!;
+        }
+
         private async Task<SolicitudPromocion> ObtenerEnEstadoAsync(int id, string estado)
         {
             var solicitud = await _solicitudRepo.ObtenerPorIdAsync(id)
@@ -463,6 +529,16 @@ namespace ApiREST_UTA.Application.Services
             Observacion = r.Observacion,
             RevisadoPor = r.RevisadoPor,
             FechaRevision = r.FechaRevision
+        };
+
+        private static ApelacionResponse AResponse(Apelacion a) => new()
+        {
+            Fundamentos = a.Fundamentos,
+            FechaPresentacion = a.FechaPresentacion,
+            Estado = a.Estado,
+            ResolucionHCU = a.ResolucionHCU,
+            Motivacion = a.Motivacion,
+            FechaResolucion = a.FechaResolucion
         };
 
         private static VotoResponse AResponse(VotoComision v) => new()

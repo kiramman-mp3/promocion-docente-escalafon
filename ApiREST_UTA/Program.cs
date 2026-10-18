@@ -70,6 +70,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<IEquivalenciaRepository, EquivalenciaRepository>();
             builder.Services.AddScoped<IEvidenciaRepository, EvidenciaRepository>();
             builder.Services.AddScoped<IComisionRepository, ComisionRepository>();
+            builder.Services.AddScoped<IApelacionRepository, ApelacionRepository>();
 
             // Inyección de servicios
             builder.Services.AddScoped<ObraService>();

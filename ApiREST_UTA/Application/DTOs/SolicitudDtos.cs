@@ -104,12 +104,37 @@ namespace ApiREST_UTA.Application.DTOs
         public List<DocumentoSolicitudResponse>? Documentos { get; set; }
         public List<VotoResponse>? Votos { get; set; }
         public VotacionResponse? Votacion { get; set; }
+        public ApelacionResponse? Apelacion { get; set; }
+        public DateTime? PlazoApelacionHasta { get; set; }
+        public bool PuedeApelar { get; set; }
     }
 
     public class AccionPersonalRequest
     {
         public string Numero { get; set; } = string.Empty;
         public DateTime Fecha { get; set; }
+    }
+
+    public class ApelarRequest
+    {
+        public string Fundamentos { get; set; } = string.Empty;
+    }
+
+    public class ResolverApelacionRequest
+    {
+        public bool Aceptada { get; set; }
+        public string ResolucionHCU { get; set; } = string.Empty;
+        public string Motivacion { get; set; } = string.Empty;
+    }
+
+    public class ApelacionResponse
+    {
+        public string Fundamentos { get; set; } = null!;
+        public DateTime FechaPresentacion { get; set; }
+        public string Estado { get; set; } = null!;
+        public string? ResolucionHCU { get; set; }
+        public string? Motivacion { get; set; }
+        public DateTime? FechaResolucion { get; set; }
     }
 
     public class MiembroComisionRequest
