@@ -58,6 +58,8 @@ Todas están en `.env` (ignorado por git). La plantilla documentada es `.env.exa
 | `API_PORT` / `FRONTEND_PORT` | | Puertos publicados por Docker Compose (5270 / 8080) |
 | `SWAGGER_ENABLED` | | `true` habilita Swagger fuera de `Development` |
 | `ASPNETCORE_ENVIRONMENT` | | `Development` por defecto en Docker Compose |
+| `LOGIN_RATE_LIMIT` | | Intentos de login por minuto y por IP (10). Súbelo para la prueba de punta a punta |
+| `RETENCION_DIAS` | | Días que se conservan los respaldos de `db-backup` (30) |
 
 SQL Server exige contraseñas de 8 caracteres o más con mayúsculas, minúsculas, números y símbolos. Evita comillas y espacios.
 
@@ -67,7 +69,7 @@ SQL Server exige contraseñas de 8 caracteres o más con mayúsculas, minúscula
 ApiREST_UTA/            API .NET 8
 frontend/               React + Vite
 database/               Scripts SQL (schema, security, seed)
-docker/                 Inicialización de SQL Server
+docker/                 Inicialización, respaldo y restauración de SQL Server
 tests/
 ├── ApiREST_UTA.Tests/  Pruebas unitarias de la API (xUnit)
 └── e2e/                Prueba de punta a punta contra Docker Compose
