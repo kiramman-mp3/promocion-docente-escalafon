@@ -7,16 +7,20 @@ import { useSesion } from "../sesion";
 import type { EstadoSolicitud, Solicitud } from "../types";
 
 const FILTROS: { estado?: EstadoSolicitud; nombre: string }[] = [
-  { estado: "Pendiente", nombre: "Por revisar" },
+  { estado: "RevisionDocumental", nombre: "Revisión documental" },
+  { estado: "EnComision", nombre: "En comisión" },
+  { estado: "Apelada", nombre: "Apeladas" },
   { estado: "Aprobada", nombre: "Aprobadas" },
+  { estado: "Ejecutada", nombre: "Ejecutadas" },
   { estado: "Rechazada", nombre: "Rechazadas" },
   { nombre: "Todas" },
 ];
 
 export function Solicitudes() {
   const { sesion, esRevisor, mensajeDeError } = useSesion();
-  // RRHH entra directo a lo pendiente; el docente ve todo su historial
-  const [filtro, setFiltro] = useState<EstadoSolicitud | undefined>(esRevisor ? "Pendiente" : undefined);
+  // Talento Humano entra a la revisión documental; la Comisión, a lo que está en votación; el docente ve su historial
+  const inicial: EstadoSolicitud | undefined = esRevisor ? "RevisionDocumental" : sesion.rol === "Autoridad" ? "EnComision" : undefined;
+  const [filtro, setFiltro] = useState<EstadoSolicitud | undefined>(inicial);
   const [solicitudes, setSolicitudes] = useState<Solicitud[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,15 +36,14 @@ export function Solicitudes() {
     };
   }, [filtro, sesion.token, mensajeDeError]);
 
-  const vacio = esRevisor
-    ? filtro === "Pendiente"
-      ? "No hay solicitudes por revisar."
-      : "No hay solicitudes en esta lista."
-    : "Todavía no has solicitado una promoción. Hazlo desde Mi expediente.";
+  const vacio =
+    esRevisor || sesion.esMiembroComision || sesion.rol === "Autoridad"
+      ? "No hay solicitudes en esta lista."
+      : "Todavía no has solicitado una promoción. Hazlo desde Mi expediente.";
 
   return (
     <main className="pagina">
-      <h1 className="pagina__titulo">{esRevisor ? "Solicitudes de promoción" : "Mis solicitudes"}</h1>
+      <h1 className="pagina__titulo">{esRevisor || sesion.esMiembroComision || sesion.rol === "Autoridad" ? "Solicitudes de promoción" : "Mis solicitudes"}</h1>
 
       <div className="filtros" role="group" aria-label="Filtrar por estado">
         {FILTROS.map((f) => (
@@ -89,7 +92,7 @@ export function Solicitudes() {
                   <td><EtiquetaEstado estado={s.estado} /></td>
                   <td className="tabla__accion">
                     <a className="boton-pdf" href={enlace({ vista: "solicitud", id: s.id })}>
-                      {esRevisor && s.estado === "Pendiente" ? "Revisar" : "Ver"}
+                      {(esRevisor && s.estado === "RevisionDocumental") || (sesion.esMiembroComision && s.estado === "EnComision") ? "Revisar" : "Ver"}
                     </a>
                   </td>
                 </tr>
