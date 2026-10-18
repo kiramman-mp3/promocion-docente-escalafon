@@ -65,3 +65,47 @@ BEGIN
     );
 END
 GO
+
+-- Requisitos de promoción configurables y con vigencia (CES arts. 76-77, UTA art. 48).
+-- Cada fila aplica a la promoción desde GradoOrigen al grado siguiente. Nunca se edita una fila vigente:
+-- se cierra (VigenteHasta) y se crea otra, para que cada solicitud conserve las reglas con que se presentó
+-- (CES, disposición transitoria novena).
+IF OBJECT_ID('dbo.RequisitosPromocion', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.RequisitosPromocion (
+        Id                         INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_RequisitosPromocion PRIMARY KEY,
+        GradoOrigen                INT NOT NULL,
+        GradoDestino               INT NOT NULL,
+        Normativa                  NVARCHAR(400) NOT NULL,
+        Resolucion                 NVARCHAR(150) NOT NULL,
+        EsPropuesta                BIT NOT NULL CONSTRAINT DF_RequisitosPromocion_EsPropuesta DEFAULT 0,
+        VigenteDesde               DATE NOT NULL,
+        VigenteHasta               DATE NULL,
+        ObrasTotales               INT NOT NULL,
+        ObrasEnGrado               INT NOT NULL,
+        EvaluacionMinima           DECIMAL(5,2) NOT NULL,
+        EvaluacionPeriodos         INT NOT NULL,
+        CapacitacionHoras          INT NOT NULL,
+        CapacitacionAnios          INT NOT NULL,
+        CapacitacionPctPedagogica  DECIMAL(5,2) NOT NULL,
+        ProyectosMeses             INT NOT NULL CONSTRAINT DF_RequisitosPromocion_Proyectos DEFAULT 0,
+        RequiereDireccionProyecto  BIT NOT NULL CONSTRAINT DF_RequisitosPromocion_Direccion DEFAULT 0,
+        TrabajosTitulacion         INT NOT NULL CONSTRAINT DF_RequisitosPromocion_Titulacion DEFAULT 0,
+        TitulacionNivelMinimo      NVARCHAR(20) NOT NULL CONSTRAINT DF_RequisitosPromocion_Nivel DEFAULT N'Grado'
+            CONSTRAINT CK_RequisitosPromocion_Nivel CHECK (TitulacionNivelMinimo IN (N'Grado', N'Maestria', N'Doctorado')),
+        CreadoPorId                INT NULL CONSTRAINT FK_RequisitosPromocion_CreadoPor REFERENCES dbo.Usuarios (Id),
+        FechaCreacion              DATETIME2 NOT NULL CONSTRAINT DF_RequisitosPromocion_Fecha DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT CK_RequisitosPromocion_Grados CHECK (GradoDestino = GradoOrigen + 1),
+        CONSTRAINT CK_RequisitosPromocion_Vigencia CHECK (VigenteHasta IS NULL OR VigenteHasta >= VigenteDesde)
+    );
+    -- Un solo requisito abierto (sin fecha de fin) por grado de origen
+    CREATE UNIQUE INDEX UX_RequisitosPromocion_Abierto
+        ON dbo.RequisitosPromocion (GradoOrigen) WHERE VigenteHasta IS NULL;
+END
+GO
+
+-- Foto de los requisitos con que se presentó cada solicitud
+IF COL_LENGTH('dbo.SolicitudesPromocion', 'RequisitosPromocionId') IS NULL
+    ALTER TABLE dbo.SolicitudesPromocion ADD RequisitosPromocionId INT NULL
+        CONSTRAINT FK_SolicitudesPromocion_Requisitos REFERENCES dbo.RequisitosPromocion (Id);
+GO

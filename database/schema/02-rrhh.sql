@@ -29,3 +29,15 @@ BEGIN
     );
 END
 GO
+
+-- CES art. 63: categoría, nivel, grado escalafonario y permanencia mínima en el grado.
+-- Promocionable = 0 en los grados 5 (Agregado 3) y 8 (Principal 3): el art. 76 excluye al grado 5
+-- (Principal 1 se alcanza por concurso de méritos y oposición) y el 8 es el último grado.
+IF COL_LENGTH('dbo.Roles', 'Categoria') IS NULL
+    ALTER TABLE dbo.Roles ADD
+        Categoria        NVARCHAR(20) NULL,
+        Nivel            INT NULL,
+        Grado            INT NULL,
+        PermanenciaAnios INT NULL,
+        Promocionable    BIT NOT NULL CONSTRAINT DF_Roles_Promocionable DEFAULT 0;
+GO

@@ -42,3 +42,19 @@ trailer<</Root 1 0 R>>
         ('1712345678', N'Principal 1', '2018-01-15', CAST(REPLACE(@pdf, '{T}', 'Accion de personal - Principal 1') AS VARBINARY(MAX)));
 END
 GO
+
+-- CES art. 63 (tabla de categorías, niveles, grados y duración). Se actualiza en cada ejecución.
+UPDATE r SET Categoria = v.Categoria, Nivel = v.Nivel, Grado = v.Grado,
+             PermanenciaAnios = v.PermanenciaAnios, Promocionable = v.Promocionable
+FROM dbo.Roles r
+JOIN (VALUES
+    (1, N'Auxiliar',  1, 1, 4,    1),
+    (2, N'Auxiliar',  2, 2, 4,    1),
+    (3, N'Agregado',  1, 3, 4,    1),
+    (4, N'Agregado',  2, 4, 4,    1),
+    (5, N'Agregado',  3, 5, 4,    0),
+    (6, N'Principal', 1, 6, 3,    1),
+    (7, N'Principal', 2, 7, 3,    1),
+    (8, N'Principal', 3, 8, NULL, 0)
+) AS v(Id, Categoria, Nivel, Grado, PermanenciaAnios, Promocionable) ON v.Id = r.Id;
+GO
