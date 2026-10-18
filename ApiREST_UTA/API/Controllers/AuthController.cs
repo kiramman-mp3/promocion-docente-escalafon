@@ -17,9 +17,9 @@ namespace ApiREST_UTA.API.Controllers
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var result = _authService.Autenticar(request);
+            var result = await _authService.AutenticarAsync(request);
             if (result == null)
                 return Unauthorized(new { mensaje = "Credenciales inválidas" });
 
