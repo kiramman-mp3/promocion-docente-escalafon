@@ -10,8 +10,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
 
         public UsuarioRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("DITICConnection");
-            Console.WriteLine($"CONEXIÓN: {_connectionString}");
+            _connectionString = configuration.GetConnectionString("DITICConnection")!;
         }
 
         public Usuario? GetByCorreo(string correo)
