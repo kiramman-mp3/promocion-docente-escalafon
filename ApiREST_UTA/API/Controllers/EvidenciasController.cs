@@ -1,3 +1,4 @@
+using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -21,18 +22,20 @@ namespace ApiREST_UTA.API.Controllers
         public Task<IActionResult> Listar(int solicitudId) =>
             Ejecutar(async () => Ok(await _service.ListarAsync(solicitudId, User)));
 
-        // multipart/form-data: archivo (PDF de hasta 10 MB), tipo y descripcion
+        // Un modelo [FromForm] (y no parámetros sueltos) para que Swagger pueda describir la subida del archivo
         [HttpPost]
+        [Consumes("multipart/form-data")]
         [RequestSizeLimit(EvidenciaSolicitud.TamanoMaximo + 1024 * 1024)]
-        public Task<IActionResult> Subir(int solicitudId, [FromForm] IFormFile? archivo, [FromForm] string? tipo, [FromForm] string? descripcion) =>
+        public Task<IActionResult> Subir(int solicitudId, [FromForm] SubirEvidenciaRequest request) =>
             Ejecutar(async () =>
             {
-                if (archivo == null)
+                if (request.Archivo == null)
                     return BadRequest(new { mensaje = "Adjunta el archivo PDF." });
 
                 using var memoria = new MemoryStream();
-                await archivo.CopyToAsync(memoria);
-                var evidencia = await _service.SubirAsync(solicitudId, tipo ?? "", descripcion ?? "", archivo.FileName, memoria.ToArray(), User);
+                await request.Archivo.CopyToAsync(memoria);
+                var evidencia = await _service.SubirAsync(
+                    solicitudId, request.Tipo ?? "", request.Descripcion ?? "", request.Archivo.FileName, memoria.ToArray(), User);
                 return StatusCode(StatusCodes.Status201Created, evidencia);
             });
 

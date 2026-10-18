@@ -144,4 +144,12 @@ namespace ApiREST_UTA.Application.DTOs
         public bool EsPresidente { get; set; }
         public DateTime? VigenteDesde { get; set; }
     }
+
+    // multipart/form-data: archivo (PDF de hasta 10 MB), tipo y descripcion
+    public class SubirEvidenciaRequest
+    {
+        public IFormFile? Archivo { get; set; }
+        public string? Tipo { get; set; }
+        public string? Descripcion { get; set; }
+    }
 }
