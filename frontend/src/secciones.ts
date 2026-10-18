@@ -1,35 +1,56 @@
 import type { Ruta } from "./ruta";
-import type { RolSistema, Sesion } from "./types";
+import type { Sesion } from "./types";
 
-// Secciones visibles en la cabecera según el rol con el que se inició sesión
-const SECCIONES: Record<RolSistema, { ruta: Ruta; nombre: string }[]> = {
-  Docente: [
-    { ruta: { vista: "expediente" }, nombre: "Mi expediente" },
-    { ruta: { vista: "solicitudes" }, nombre: "Mis solicitudes" },
-  ],
-  RRHH: [
-    { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
-    { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
-  ],
-  Administrador: [
-    { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
-    { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
-    { ruta: { vista: "usuarios" }, nombre: "Usuarios" },
-  ],
-};
+type Seccion = { ruta: Ruta; nombre: string };
+type DatosAcceso = Pick<Sesion, "rol" | "esMiembroComision">;
 
-export function seccionesDe(rol: RolSistema) {
-  return SECCIONES[rol];
+const COMISION: Seccion = { ruta: { vista: "comision" }, nombre: "Comisión" };
+
+// Secciones visibles en la cabecera según el rol y la pertenencia a la Comisión Académica
+export function seccionesDe(sesion: DatosAcceso): Seccion[] {
+  const conComision = (secciones: Seccion[]) => (sesion.esMiembroComision ? [...secciones, COMISION] : secciones);
+
+  switch (sesion.rol) {
+    case "Docente":
+      return conComision([
+        { ruta: { vista: "expediente" }, nombre: "Mi expediente" },
+        { ruta: { vista: "solicitudes" }, nombre: sesion.esMiembroComision ? "Solicitudes" : "Mis solicitudes" },
+      ]);
+    case "Autoridad":
+      return [
+        COMISION,
+        { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
+        { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
+      ];
+    case "RRHH":
+      return conComision([
+        { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
+        { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
+      ]);
+    case "Administrador":
+      return [
+        { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
+        { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
+        COMISION,
+        { ruta: { vista: "usuarios" }, nombre: "Usuarios" },
+        { ruta: { vista: "requisitos" }, nombre: "Requisitos" },
+        { ruta: { vista: "operacion" }, nombre: "Operación" },
+      ];
+  }
 }
 
-// Qué vistas puede abrir cada rol (la API vuelve a validar los permisos)
-export function rutaPermitida(ruta: Ruta, sesion: Pick<Sesion, "rol">) {
+// Qué vistas puede abrir cada usuario (la API vuelve a validar los permisos)
+export function rutaPermitida(ruta: Ruta, sesion: DatosAcceso) {
   switch (ruta.vista) {
     case "expediente":
       return sesion.rol === "Docente";
     case "consulta":
-      return sesion.rol !== "Docente";
+      return sesion.rol !== "Docente" || sesion.esMiembroComision;
+    case "comision":
+      return sesion.esMiembroComision || sesion.rol === "Administrador";
     case "usuarios":
+    case "requisitos":
+    case "operacion":
       return sesion.rol === "Administrador";
     case "solicitudes":
     case "solicitud":

@@ -3,7 +3,7 @@ import { actualizarUsuario, cambiarContrasena, crearUsuario, listarUsuarios, typ
 import { useSesion } from "../sesion";
 import type { RolSistema, Usuario } from "../types";
 
-const ROLES: RolSistema[] = ["Docente", "RRHH", "Administrador"];
+const ROLES: RolSistema[] = ["Docente", "RRHH", "Autoridad", "Administrador"];
 
 // Campos compartidos por el alta y la edición
 function CamposUsuario({ datos, onCambio }: { datos: DatosUsuario; onCambio: (d: DatosUsuario) => void }) {

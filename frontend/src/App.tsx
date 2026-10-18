@@ -6,8 +6,11 @@ import { enlace, useRuta } from "./ruta";
 import { rutaPermitida, seccionesDe } from "./secciones";
 import { ContextoSesion } from "./sesion";
 import type { RolEscalafon, Sesion } from "./types";
+import { Comision } from "./vistas/Comision";
 import { Consulta } from "./vistas/Consulta";
 import { MiExpediente } from "./vistas/MiExpediente";
+import { Operacion } from "./vistas/Operacion";
+import { Requisitos } from "./vistas/Requisitos";
 import { SolicitudDetalle } from "./vistas/SolicitudDetalle";
 import { Solicitudes } from "./vistas/Solicitudes";
 import { Usuarios } from "./vistas/Usuarios";
@@ -51,7 +54,7 @@ export default function App() {
   // Cada rol aterriza en su primera sección; rutas no permitidas también vuelven ahí
   useEffect(() => {
     if (sesion && !rutaPermitida(ruta, sesion)) {
-      window.location.replace(enlace(seccionesDe(sesion.rol)[0].ruta));
+      window.location.replace(enlace(seccionesDe(sesion)[0].ruta));
     }
   }, [ruta, sesion]);
 
@@ -78,6 +81,9 @@ export default function App() {
             {ruta.vista === "solicitudes" && <Solicitudes />}
             {ruta.vista === "solicitud" && <SolicitudDetalle id={ruta.id} />}
             {ruta.vista === "usuarios" && <Usuarios />}
+            {ruta.vista === "comision" && <Comision />}
+            {ruta.vista === "requisitos" && <Requisitos />}
+            {ruta.vista === "operacion" && <Operacion />}
           </>
         )}
       </div>
