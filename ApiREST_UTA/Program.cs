@@ -11,6 +11,8 @@ namespace ApiREST_UTA
 {
     public class Program
     {
+        private const string PoliticaCorsFrontend = "Frontend";
+
         public static void Main(string[] args)
         {
             // Carga el .env de la raíz del repo (si existe) sin pisar variables ya definidas, p. ej. por docker
@@ -77,6 +79,17 @@ namespace ApiREST_UTA
 
             builder.Services.AddControllers();
 
+            // CORS: orígenes permitidos separados por coma en CORS_ORIGINS (por defecto el frontend de Vite)
+            var origenesPermitidos = (builder.Configuration["CORS_ORIGINS"] ?? "http://localhost:5173")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy(PoliticaCorsFrontend, policy => policy
+                    .WithOrigins(origenesPermitidos)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod());
+            });
+
             // Configuración de JWT Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -98,6 +111,7 @@ namespace ApiREST_UTA
 
             var app = builder.Build();
 
+            app.UseCors(PoliticaCorsFrontend);
             app.UseAuthentication();
             app.UseAuthorization();
 
