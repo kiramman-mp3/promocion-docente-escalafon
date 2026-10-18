@@ -35,6 +35,12 @@ namespace ApiREST_UTA.Application.Services
             if (await _solicitudRepo.ExistePendienteAsync(cedula))
                 throw ReglaNegocioException.Conflicto("Ya hay una solicitud pendiente para esta cédula.");
 
+            // RRHH es una base externa: tras aprobar, el rol actual no cambia hasta que RRHH lo actualice
+            var aprobadas = await _solicitudRepo.ListarAsync(SolicitudPromocion.Aprobada, cedula);
+            if (aprobadas.Any(s => s.RolObjetivo == rolObjetivo.Nombre))
+                throw ReglaNegocioException.Conflicto(
+                    $"La promoción a {rolObjetivo.Nombre} ya fue aprobada; falta que RRHH registre el nuevo rol.");
+
             var id = await _solicitudRepo.CrearAsync(new SolicitudPromocion
             {
                 Cedula = cedula,

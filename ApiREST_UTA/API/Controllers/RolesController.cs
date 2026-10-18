@@ -6,7 +6,7 @@ namespace ApiREST_UTA.API.Controllers
 {
     [ApiController]
     [Route("api/roles")]
-    [Authorize]
+    [AllowAnonymous] // El catálogo del escalafón es público (lo usa también la pantalla de login)
     public class RolesController : ControllerBase
     {
         private readonly IRolRepository _rolRepo;

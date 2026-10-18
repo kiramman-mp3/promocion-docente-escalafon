@@ -46,9 +46,28 @@ Todos usan la contraseña `Uta2026*`.
 |----------------------------|---------------|------------|-------------------------------------------------------|
 | admin@uta.edu.ec           | Administrador | –          |                                                       |
 | rrhh@uta.edu.ec            | RRHH          | –          |                                                       |
-| ana.perez@uta.edu.ec       | Docente       | 1801234567 | Agregado 1, cumple todo para Agregado 2               |
+| ana.perez@uta.edu.ec       | Docente       | 1801234567 | Agregado 1, cumple todo para Agregado 2; tiene una solicitud pendiente |
 | carlos.gomez@uta.edu.ec    | Docente       | 1809876543 | Auxiliar 2, le faltan 4 requisitos para Agregado 1    |
 | lucia.mora@uta.edu.ec      | Docente       | 1712345678 | Principal 1, le falta tesis doctoral para Principal 2 |
+
+## Roles y flujo de aprobación
+
+Todos los usuarios entran por el mismo login; lo que ven depende de su rol.
+
+| Rol           | Puede                                                                                       |
+|---------------|---------------------------------------------------------------------------------------------|
+| Docente       | Ver **solo su propio expediente** (la API rechaza otras cédulas) y solicitar su promoción. Ver el estado de sus solicitudes y el motivo de cada documento rechazado. |
+| RRHH          | Ver la bandeja de solicitudes, consultar cualquier docente, aprobar o rechazar cada documento del expediente y aprobar o rechazar la solicitud. |
+| Administrador | Todo lo de RRHH, más crear usuarios, cambiar su rol o cédula, activarlos o desactivarlos y restablecer contraseñas. |
+
+Reglas del flujo:
+
+1. Una cédula solo puede tener una solicitud **pendiente** a la vez, y no se puede volver a pedir una promoción ya aprobada.
+2. Rechazar un documento o una solicitud exige escribir el motivo, que el docente ve.
+3. Una solicitud no se puede aprobar mientras tenga documentos rechazados.
+4. Las solicitudes y revisiones se guardan en DITIC (`SolicitudesPromocion`, `RevisionesDocumento`). El login de la API solo puede escribir en esas tablas y en `Usuarios`; las bases de las demás direcciones siguen siendo de solo lectura. Por eso, al aprobar una promoción, **RRHH debe registrar el nuevo rol en su propio sistema**.
+
+Endpoints nuevos: `GET /api/roles`, `GET|POST /api/solicitudes`, `GET /api/solicitudes/{id}`, `PUT /api/solicitudes/{id}/documentos`, `PUT /api/solicitudes/{id}/resolucion`, `GET|POST /api/usuarios`, `PUT /api/usuarios/{id}`, `PUT /api/usuarios/{id}/contrasena`. Todos aparecen en Swagger.
 
 ## Desarrollo local (sin contenedores para API y frontend)
 
