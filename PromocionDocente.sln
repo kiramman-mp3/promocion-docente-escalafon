@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiREST_UTA", "ApiREST_UTA\ApiREST_UTA.csproj", "{D3A51CA3-D335-4277-8049-E70A80BF9CB6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EE981676-1A14-428D-82E8-7A8A370A92AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiREST_UTA.Tests", "tests\ApiREST_UTA.Tests\ApiREST_UTA.Tests.csproj", "{7FB35E15-5F2F-4498-A149-FBEABC66A57C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D3A51CA3-D335-4277-8049-E70A80BF9CB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3A51CA3-D335-4277-8049-E70A80BF9CB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3A51CA3-D335-4277-8049-E70A80BF9CB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3A51CA3-D335-4277-8049-E70A80BF9CB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FB35E15-5F2F-4498-A149-FBEABC66A57C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FB35E15-5F2F-4498-A149-FBEABC66A57C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FB35E15-5F2F-4498-A149-FBEABC66A57C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FB35E15-5F2F-4498-A149-FBEABC66A57C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7FB35E15-5F2F-4498-A149-FBEABC66A57C} = {EE981676-1A14-428D-82E8-7A8A370A92AC}
+	EndGlobalSection
+EndGlobal
