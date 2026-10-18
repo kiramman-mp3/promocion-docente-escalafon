@@ -803,6 +803,12 @@ th.tabla__num {
   color: #fff;
 }
 
+/* Contiene los .sr-only de las cabeceras: si no, desbordan la página en móvil */
+.tabla-contenedor,
+.evidencia__panel {
+  position: relative;
+}
+
 .tabla-contenedor {
   overflow-x: auto;
 }
