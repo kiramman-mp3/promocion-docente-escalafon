@@ -16,12 +16,14 @@ export function seccionesDe(sesion: DatosAcceso): Seccion[] {
         { ruta: { vista: "expediente" }, nombre: "Mi expediente" },
         { ruta: { vista: "solicitudes" }, nombre: sesion.esMiembroComision ? "Solicitudes" : "Mis solicitudes" },
       ]);
-    case "Autoridad":
-      return [
-        COMISION,
+    case "Autoridad": {
+      // Una autoridad que ya no integra la Comisión no debe aterrizar en ella
+      const generales: Seccion[] = [
         { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
         { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
       ];
+      return sesion.esMiembroComision ? [COMISION, ...generales] : generales;
+    }
     case "RRHH":
       return conComision([
         { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },

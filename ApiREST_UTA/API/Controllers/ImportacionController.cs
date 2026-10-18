@@ -169,7 +169,15 @@ namespace ApiREST_UTA.API.Controllers
             var proyectos = await _proyectoRepo.ObtenerProyectosAsync(req.Cedula);
             return Ok(proyectos.Select(p => new
             {
-                p.Id, p.Cedula, p.NombreProyecto, p.Rol, p.TipoProyecto, p.Meses, p.MesesPonderados, p.FechaInicio, p.FechaFin
+                p.Id,
+                p.Cedula,
+                p.NombreProyecto,
+                p.Rol,
+                p.TipoProyecto,
+                p.Meses,
+                p.MesesPonderados,
+                p.FechaInicio,
+                p.FechaFin
             }));
         }
 

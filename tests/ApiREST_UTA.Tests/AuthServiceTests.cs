@@ -24,17 +24,19 @@ namespace ApiREST_UTA.Tests
             Activo = activo
         };
 
-        private static AuthService Servicio(Usuario? usuario)
+        private static AuthService Servicio(Usuario? usuario, MiembroComision? miembro = null)
         {
             var repo = new Mock<IUsuarioRepository>();
             repo.Setup(r => r.GetByCorreo(It.IsAny<string>())).Returns(usuario);
-            return new AuthService(repo.Object, ClaveJwt);
+            var comision = new Mock<IComisionRepository>();
+            comision.Setup(c => c.ObtenerMiembroActivoPorUsuarioAsync(It.IsAny<int>())).ReturnsAsync(miembro);
+            return new AuthService(repo.Object, comision.Object, ClaveJwt);
         }
 
         [Fact]
-        public void CredencialesValidas_DevuelveTokenConRolYCedula()
+        public async Task CredencialesValidas_DevuelveTokenConRolYCedula()
         {
-            var respuesta = Servicio(Ana()).Autenticar(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = Contrasena });
+            var respuesta = await Servicio(Ana()).AutenticarAsync(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = Contrasena });
 
             Assert.NotNull(respuesta);
             Assert.Equal(3, respuesta!.Id);
@@ -45,28 +47,45 @@ namespace ApiREST_UTA.Tests
             Assert.Contains(token.Claims, c => c.Type == ClaimsUsuario.Cedula && c.Value == Usuarios.CedulaAna);
             Assert.Contains(token.Claims, c => c.Value == RolesSistema.Docente);
             Assert.Equal("ApiREST_UTA", token.Issuer);
+            Assert.False(respuesta.EsMiembroComision);
+            Assert.DoesNotContain(token.Claims, c => c.Type == ClaimsUsuario.Comision);
         }
 
         [Fact]
-        public void ContrasenaIncorrecta_DevuelveNull()
+        public async Task MiembroDeLaComision_LlevaElCargoEnLaRespuestaYEnElToken()
         {
-            var respuesta = Servicio(Ana()).Autenticar(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = "otra" });
+            var miembro = new MiembroComision { Id = 3, UsuarioId = 3, Cargo = MiembroComision.ProfesorTerna };
+
+            var respuesta = await Servicio(Ana(), miembro).AutenticarAsync(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = Contrasena });
+
+            Assert.NotNull(respuesta);
+            Assert.True(respuesta!.EsMiembroComision);
+            Assert.False(respuesta.EsPresidenteComision);
+            Assert.Equal(MiembroComision.ProfesorTerna, respuesta.CargoComision);
+            var token = new JwtSecurityTokenHandler().ReadJwtToken(respuesta.Token);
+            Assert.Contains(token.Claims, c => c.Type == ClaimsUsuario.Comision && c.Value == "true");
+        }
+
+        [Fact]
+        public async Task ContrasenaIncorrecta_DevuelveNull()
+        {
+            var respuesta = await Servicio(Ana()).AutenticarAsync(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = "otra" });
 
             Assert.Null(respuesta);
         }
 
         [Fact]
-        public void UsuarioDesactivado_NoPuedeIniciarSesion()
+        public async Task UsuarioDesactivado_NoPuedeIniciarSesion()
         {
-            var respuesta = Servicio(Ana(activo: false)).Autenticar(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = Contrasena });
+            var respuesta = await Servicio(Ana(activo: false)).AutenticarAsync(new LoginRequest { Correo = "ana.perez@uta.edu.ec", Contrasena = Contrasena });
 
             Assert.Null(respuesta);
         }
 
         [Fact]
-        public void CorreoInexistente_DevuelveNull()
+        public async Task CorreoInexistente_DevuelveNull()
         {
-            var respuesta = Servicio(null).Autenticar(new LoginRequest { Correo = "nadie@uta.edu.ec", Contrasena = Contrasena });
+            var respuesta = await Servicio(null).AutenticarAsync(new LoginRequest { Correo = "nadie@uta.edu.ec", Contrasena = Contrasena });
 
             Assert.Null(respuesta);
         }

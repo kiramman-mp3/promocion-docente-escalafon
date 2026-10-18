@@ -1,17 +1,17 @@
-﻿using ApiREST_UTA.Application.Services;
+﻿using ApiREST_UTA.API.Filters;
+using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Interfaces;
-using ApiREST_UTA.Infrastructure.Repositories;
 using ApiREST_UTA.Infrastructure.Documentos;
-using ApiREST_UTA.API.Filters;
+using ApiREST_UTA.Infrastructure.Repositories;
 using ApiREST_UTA.Infrastructure.Salud;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace ApiREST_UTA
 {
