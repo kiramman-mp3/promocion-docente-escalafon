@@ -39,8 +39,6 @@ namespace ApiREST_UTA.Application.Services
 
         private string GenerarToken(Usuario usuario)
         {
-            var claveJwt = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8";
-
             var claims = new[]
             {
                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
@@ -48,7 +46,7 @@ namespace ApiREST_UTA.Application.Services
                new Claim(ClaimTypes.Role, usuario.Rol)
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(claveJwt));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
