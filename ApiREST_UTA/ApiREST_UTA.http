@@ -1,6 +1,36 @@
-@ApiREST_UTA_HostAddress = http://localhost:5270
+@host = http://localhost:5270
+@cedula = 1801234567
 
-GET {{ApiREST_UTA_HostAddress}}/weatherforecast/
-Accept: application/json
+### Login (usuarios de prueba: contraseña Uta2026*)
+# @name login
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "correo": "ana.perez@uta.edu.ec",
+  "contrasena": "Uta2026*"
+}
 
 ###
+@token = {{login.response.body.token}}
+
+### Tiempo en el rol (RRHH)
+POST {{host}}/api/importar/tiempo-rol
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "cedula": "{{cedula}}" }
+
+### Obras desde una fecha (DIDE)
+POST {{host}}/api/importar/obras
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "cedula": "{{cedula}}", "fechaInicio": "2020-03-01" }
+
+### Validar promoción (rolActualId 3 = Agregado 1)
+POST {{host}}/api/promocion/validar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "cedula": "{{cedula}}", "rolActualId": 3 }
