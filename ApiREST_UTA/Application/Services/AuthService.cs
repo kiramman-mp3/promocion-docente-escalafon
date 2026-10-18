@@ -39,7 +39,10 @@ namespace ApiREST_UTA.Application.Services
                 NombreCompleto = $"{usuario.Nombre} {usuario.Apellido}",
                 Correo = usuario.Correo,
                 Rol = usuario.Rol,
-                Cedula = usuario.Cedula
+                Cedula = usuario.Cedula,
+                EsMiembroComision = miembro != null,
+                EsPresidenteComision = miembro?.EsPresidente ?? false,
+                CargoComision = miembro?.Cargo
             };
         }
 
