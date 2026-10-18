@@ -144,3 +144,73 @@ BEGIN
         (N'TiempoRol', N'Obra', N'Evaluacion', N'Investigacion', N'Curso', N'Proyecto', N'TrabajoTitulacion', N'Equivalencia', N'Evidencia'));
 END
 GO
+
+-- Rol de sistema "Autoridad": Vicerrector Académico, Director Financiero y otros miembros de la Comisión Académica
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Usuarios_Rol' AND definition NOT LIKE '%Autoridad%')
+BEGIN
+    ALTER TABLE dbo.Usuarios DROP CONSTRAINT CK_Usuarios_Rol;
+    ALTER TABLE dbo.Usuarios ADD CONSTRAINT CK_Usuarios_Rol CHECK (Rol IN (N'Administrador', N'RRHH', N'Autoridad', N'Docente'));
+END
+GO
+
+-- Estados del flujo (UTA art. 47; CES arts. 75, 77 l y 99):
+-- RevisionDocumental (Talento Humano) -> EnComision -> Aprobada | Rechazada -> Apelada -> Ejecutada
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_SolicitudesPromocion_Estado' AND definition NOT LIKE '%RevisionDocumental%')
+BEGIN
+    DROP INDEX IF EXISTS UX_SolicitudesPromocion_PendientePorCedula ON dbo.SolicitudesPromocion;
+    ALTER TABLE dbo.SolicitudesPromocion DROP CONSTRAINT CK_SolicitudesPromocion_Estado;
+    ALTER TABLE dbo.SolicitudesPromocion DROP CONSTRAINT DF_SolicitudesPromocion_Estado;
+    EXEC (N'UPDATE dbo.SolicitudesPromocion SET Estado = N''RevisionDocumental'' WHERE Estado = N''Pendiente'';');
+    ALTER TABLE dbo.SolicitudesPromocion ADD CONSTRAINT DF_SolicitudesPromocion_Estado DEFAULT N'RevisionDocumental' FOR Estado;
+    ALTER TABLE dbo.SolicitudesPromocion ADD CONSTRAINT CK_SolicitudesPromocion_Estado CHECK
+        (Estado IN (N'RevisionDocumental', N'EnComision', N'Aprobada', N'Rechazada', N'Apelada', N'Ejecutada'));
+END
+GO
+
+-- Una sola solicitud en trámite por cédula
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_SolicitudesPromocion_EnTramitePorCedula')
+    CREATE UNIQUE INDEX UX_SolicitudesPromocion_EnTramitePorCedula
+        ON dbo.SolicitudesPromocion (Cedula) WHERE Estado IN (N'RevisionDocumental', N'EnComision', N'Apelada');
+GO
+
+IF COL_LENGTH('dbo.SolicitudesPromocion', 'FechaEnvioComision') IS NULL
+    ALTER TABLE dbo.SolicitudesPromocion ADD
+        FechaEnvioComision   DATETIME2 NULL,
+        EnviadaComisionPorId INT NULL CONSTRAINT FK_SolicitudesPromocion_EnviadaPor REFERENCES dbo.Usuarios (Id),
+        NumeroResolucion     NVARCHAR(30) NULL;
+GO
+
+-- Comisión Académica de promoción (UTA art. 47): Vicerrector Académico (preside, voto dirimente), un profesor del
+-- HCU, dos profesores de las ternas, Director Financiero y Director de Talento Humano. Todos con voz y voto.
+IF OBJECT_ID('dbo.ComisionMiembros', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ComisionMiembros (
+        Id           INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ComisionMiembros PRIMARY KEY,
+        UsuarioId    INT NOT NULL CONSTRAINT FK_ComisionMiembros_Usuario REFERENCES dbo.Usuarios (Id),
+        Cargo        NVARCHAR(30) NOT NULL
+            CONSTRAINT CK_ComisionMiembros_Cargo CHECK (Cargo IN (N'VicerrectorAcademico', N'ProfesorHCU', N'ProfesorTerna',
+                N'DirectorFinanciero', N'DirectorTalentoHumano')),
+        EsPresidente BIT NOT NULL CONSTRAINT DF_ComisionMiembros_Presidente DEFAULT 0,
+        VigenteDesde DATE NOT NULL,
+        VigenteHasta DATE NULL
+    );
+    CREATE UNIQUE INDEX UX_ComisionMiembros_UsuarioActivo ON dbo.ComisionMiembros (UsuarioId) WHERE VigenteHasta IS NULL;
+    CREATE UNIQUE INDEX UX_ComisionMiembros_PresidenteActivo ON dbo.ComisionMiembros (EsPresidente) WHERE VigenteHasta IS NULL AND EsPresidente = 1;
+END
+GO
+
+IF OBJECT_ID('dbo.VotosComision', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.VotosComision (
+        Id                   INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_VotosComision PRIMARY KEY,
+        SolicitudId          INT NOT NULL CONSTRAINT FK_VotosComision_Solicitud REFERENCES dbo.SolicitudesPromocion (Id),
+        MiembroId            INT NOT NULL CONSTRAINT FK_VotosComision_Miembro REFERENCES dbo.ComisionMiembros (Id),
+        Voto                 NVARCHAR(15) NOT NULL
+            CONSTRAINT CK_VotosComision_Voto CHECK (Voto IN (N'AFavor', N'EnContra', N'Abstencion')),
+        Motivacion           NVARCHAR(1000) NOT NULL,
+        CertificaPresupuesto BIT NULL,
+        Fecha                DATETIME2 NOT NULL CONSTRAINT DF_VotosComision_Fecha DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT UQ_VotosComision_Miembro UNIQUE (SolicitudId, MiembroId)
+    );
+END
+GO
