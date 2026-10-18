@@ -1,4 +1,5 @@
-﻿using ApiREST_UTA.Application.DTOs;
+﻿using ApiREST_UTA.API.Filters;
+using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 [Route("api/promocion")]
 [ApiController]
 [Authorize]
+[SoloCedulaPropia]
 public class PromocionController : ControllerBase
 {
     private readonly PromocionService _promocionService;

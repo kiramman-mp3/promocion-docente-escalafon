@@ -1,4 +1,5 @@
-﻿using ApiREST_UTA.Application.DTOs;
+﻿using ApiREST_UTA.API.Filters;
+using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Domain.Interfaces.ApiREST_UTA.Domain.Interfaces;
@@ -10,6 +11,7 @@ namespace ApiREST_UTA.API.Controllers
 {
     [ApiController]
     [Route("api/importar")]
+    [SoloCedulaPropia]
     public class ImportacionController : ControllerBase
     {
         private readonly IRRHHRepository _rrhhRepo;
