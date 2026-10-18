@@ -16,14 +16,11 @@ export function seccionesDe(sesion: DatosAcceso): Seccion[] {
         { ruta: { vista: "expediente" }, nombre: "Mi expediente" },
         { ruta: { vista: "solicitudes" }, nombre: sesion.esMiembroComision ? "Solicitudes" : "Mis solicitudes" },
       ]);
-    case "Autoridad": {
-      // Una autoridad que ya no integra la Comisión no debe aterrizar en ella
-      const generales: Seccion[] = [
-        { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
-        { ruta: { vista: "consulta" }, nombre: "Consultar docente" },
-      ];
-      return sesion.esMiembroComision ? [COMISION, ...generales] : generales;
-    }
+    case "Autoridad":
+      // Una autoridad solo consulta expedientes como miembro de la Comisión (la API aplica la misma regla)
+      return sesion.esMiembroComision
+        ? [COMISION, { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" }, { ruta: { vista: "consulta" }, nombre: "Consultar docente" }]
+        : [{ ruta: { vista: "solicitudes" }, nombre: "Solicitudes" }];
     case "RRHH":
       return conComision([
         { ruta: { vista: "solicitudes" }, nombre: "Solicitudes" },
@@ -47,7 +44,7 @@ export function rutaPermitida(ruta: Ruta, sesion: DatosAcceso) {
     case "expediente":
       return sesion.rol === "Docente";
     case "consulta":
-      return sesion.rol !== "Docente" || sesion.esMiembroComision;
+      return sesion.rol === "RRHH" || sesion.rol === "Administrador" || sesion.esMiembroComision;
     case "comision":
       return sesion.esMiembroComision || sesion.rol === "Administrador";
     case "usuarios":
