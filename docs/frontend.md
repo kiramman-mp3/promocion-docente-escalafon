@@ -12,25 +12,32 @@ src/
 ├── types.ts              Tipos de las respuestas de la API
 ├── sesion.ts             Contexto de sesión y hook useSesion()
 ├── ruta.ts               Rutas por hash: leerRuta(), enlace(), navegar(), useRuta()
-├── secciones.ts          Secciones de cada rol y rutaPermitida()
-├── requisitos.ts         Texto de cada requisito del dictamen a partir del expediente
-├── useExpediente.ts      Carga el expediente de una cédula; cumpleTodo()
-├── format.ts             Fechas y números en es-EC, plural()
+├── secciones.ts          Secciones de cada usuario (rol y Comisión) y rutaPermitida()
+├── useExpediente.ts      Carga el expediente y el dictamen de una cédula; cumpleTodo()
+├── format.ts             Fechas y números en es-EC, plural() y nombres de estados, cargos y tipos
 ├── styles.css            Estilos (tokens de color y tipografía en :root)
 ├── components/
 │   ├── Login.tsx              Pantalla de ingreso
-│   ├── Cabecera.tsx           Navegación según el rol
-│   ├── Escalafon.tsx          La escalera de roles (rol actual, siguiente, "puede ascender")
-│   ├── Dictamen.tsx           Veredicto y lista de requisitos
-│   ├── Evidencia.tsx          Pestañas con los documentos; en modo revisión agrega la columna "Revisión"
+│   ├── Cabecera.tsx           Navegación según el rol y la Comisión
+│   ├── Escalafon.tsx          La escalera de grados (actual, siguiente, "por concurso")
+│   ├── Dictamen.tsx           Veredicto y requisitos con artículo, obtenido, exigido y excepciones
+│   ├── Evidencia.tsx          Pestañas con los documentos de las bases institucionales
 │   ├── ControlRevision.tsx    Aprobar / rechazar un documento (con motivo)
-│   ├── PanelSolicitud.tsx     Solicitar promoción o ver la solicitud en curso
-│   └── EtiquetaEstado.tsx     Etiqueta Pendiente / Aprobada / Rechazada
+│   ├── PanelSolicitud.tsx     Presentar la solicitud (art. 99) o ver la que está en curso
+│   ├── EtiquetaEstado.tsx     Etiqueta del estado de la solicitud
+│   └── solicitud/
+│       ├── Evidencias.tsx         Anexar y descargar evidencias en PDF
+│       ├── RevisionDocumental.tsx Documentos agrupados por tipo y envío a la Comisión
+│       ├── Votacion.tsx           Conteo, votos motivados, voto propio y cierre
+│       └── Resolucion.tsx         Acto en PDF, acción de personal y apelación
 ├── vistas/
 │   ├── MiExpediente.tsx       Docente
-│   ├── Consulta.tsx           RRHH y Administrador: buscar por cédula
+│   ├── Consulta.tsx           Talento Humano, Administrador y Comisión: buscar por cédula
 │   ├── Solicitudes.tsx        Bandeja con filtros por estado
-│   ├── SolicitudDetalle.tsx   Revisión de documentos y resolución
+│   ├── SolicitudDetalle.tsx   Línea de tiempo del trámite y todas sus etapas
+│   ├── Comision.tsx           Solicitudes en votación e integrantes de la Comisión
+│   ├── Requisitos.tsx         Versiones de los requisitos de promoción
+│   ├── Operacion.tsx          Disponibilidad, reporte de uso y bitácora de auditoría
 │   └── Usuarios.tsx           Administración de cuentas
 └── test/                     Configuración y datos de las pruebas
 ```
@@ -40,16 +47,19 @@ src/
 | Hash | Vista | Roles |
 |------|-------|-------|
 | `#/expediente` | Mi expediente | Docente |
-| `#/consulta` | Consultar docente | RRHH, Administrador |
+| `#/consulta` | Consultar docente | RRHH, Administrador, miembros de la Comisión |
 | `#/solicitudes` | Bandeja o mis solicitudes | Todos |
-| `#/solicitudes/{id}` | Detalle de la solicitud | Todos (la API valida que un docente solo vea las suyas) |
+| `#/solicitudes/{id}` | Detalle de la solicitud | Todos (la API valida quién puede ver cada una) |
+| `#/comision` | Comisión Académica | Miembros de la Comisión, Administrador |
 | `#/usuarios` | Usuarios | Administrador |
+| `#/requisitos` | Requisitos de promoción | Administrador |
+| `#/operacion` | Operación | Administrador |
 
-Una ruta no permitida redirige a la primera sección del rol (`secciones.ts`).
+Una ruta no permitida redirige a la primera sección del usuario (`secciones.ts`). Qué ve cada rol está en [roles y flujo](roles-y-flujo.md#secciones-del-frontend).
 
 ## Sesión
 
-- El login devuelve el token y los datos del usuario; se guardan en `sessionStorage`, así que la sesión se cierra al cerrar la pestaña.
+- El login devuelve el token, los datos del usuario y su pertenencia a la Comisión; se guardan en `sessionStorage`, así que la sesión se cierra al cerrar la pestaña.
 - `useSesion()` da acceso a la sesión, al catálogo de roles, a `esRevisor` y a `mensajeDeError(e)`, que cierra la sesión si la API responde 401.
 - El catálogo de roles (`GET /api/roles`) se carga al abrir la aplicación, antes del login.
 
@@ -74,7 +84,7 @@ En `npm run dev`, las ayudas con usuarios y cédulas de prueba solo aparecen en 
 
 Tipografías: Literata (títulos y cifras) y Public Sans (interfaz), servidas desde el propio bundle con `@fontsource`.
 
-Accesibilidad: foco visible, pestañas con el patrón ARIA (flechas izquierda/derecha), etiquetas para lectores de pantalla en los botones de cada documento, `prefers-reduced-motion` respetado y diseño probado a 390 px de ancho.
+Accesibilidad: foco visible, pestañas con el patrón ARIA (flechas izquierda/derecha), etiquetas para lectores de pantalla en los botones de cada documento, `prefers-reduced-motion` respetado y diseño probado a 390 px de ancho (las tablas anchas y las pestañas se desplazan dentro de su contenedor, no la página).
 
 ## Scripts
 

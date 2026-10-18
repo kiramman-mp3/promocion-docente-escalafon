@@ -1,5 +1,5 @@
 #!/bin/bash
-# Restaura una base desde un respaldo del volumen sqlserver-backups.
+# Restaura una base desde un respaldo de /var/opt/mssql/backup (volumen sqlserver-data).
 #   docker compose --profile operacion run --rm -e BASE=DITIC -e ARCHIVO=DITIC_20261018_020000.bak db-restore
 # Sin ARCHIVO usa el respaldo más reciente de la base. Reemplaza la base actual: úsalo con cuidado.
 set -euo pipefail
