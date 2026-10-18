@@ -2,6 +2,7 @@
 {
     public class TiempoRolResponse
     {
+        public int Id { get; set; }
         public string Cedula { get; set; }
         public string RolActual { get; set; }
         public int AniosEnRol { get; set; }
