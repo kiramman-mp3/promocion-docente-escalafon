@@ -1,6 +1,6 @@
 #!/bin/bash
 # Respaldo completo y verificado de las bases (Reglamento DITIC art. 23 e).
-# Los archivos .bak quedan en el volumen sqlserver-backups (/var/opt/mssql/backup dentro de SQL Server).
+# Los archivos .bak quedan en /var/opt/mssql/backup, dentro del volumen sqlserver-data de SQL Server.
 #   docker compose --profile operacion run --rm db-backup
 set -euo pipefail
 
