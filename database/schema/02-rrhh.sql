@@ -41,3 +41,49 @@ IF COL_LENGTH('dbo.Roles', 'Categoria') IS NULL
         PermanenciaAnios INT NULL,
         Promocionable    BIT NOT NULL CONSTRAINT DF_Roles_Promocionable DEFAULT 0;
 GO
+
+-- Trayectoria docente: necesaria para la experiencia acumulada del personal que ingresó antes del
+-- 07-11-2012 (UTA 0153-HCU-2026, transitoria quinta; CES, transitoria décima primera).
+IF OBJECT_ID('dbo.TrayectoriaDocente', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TrayectoriaDocente (
+        Cedula                  CHAR(10) NOT NULL CONSTRAINT PK_TrayectoriaDocente PRIMARY KEY,
+        FechaIngresoInstitucion DATE NOT NULL,
+        FechaIngresoTitular     DATE NOT NULL,
+        MesesNoTitular          INT NOT NULL CONSTRAINT DF_Trayectoria_NoTitular DEFAULT 0,
+        MesesTecnicoDocente     INT NOT NULL CONSTRAINT DF_Trayectoria_Tecnico DEFAULT 0,
+        IngresoConPhD           BIT NOT NULL CONSTRAINT DF_Trayectoria_PhD DEFAULT 0
+    );
+END
+GO
+
+-- Cargos de autoridad: excepciones de los arts. 76 d y 77 f del CES
+IF OBJECT_ID('dbo.CargosAutoridad', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CargosAutoridad (
+        Id          INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_CargosAutoridad PRIMARY KEY,
+        Cedula      CHAR(10) NOT NULL,
+        Cargo       NVARCHAR(150) NOT NULL,
+        TipoCargo   NVARCHAR(30) NOT NULL
+            CONSTRAINT CK_CargosAutoridad_Tipo CHECK (TipoCargo IN (N'Rector', N'Vicerrector', N'AutoridadOrganismoSES', N'AutoridadAcademica')),
+        FechaInicio DATE NOT NULL,
+        FechaFin    DATE NULL,
+        Pdf         VARBINARY(MAX) NULL
+    );
+    CREATE INDEX IX_CargosAutoridad_Cedula ON dbo.CargosAutoridad (Cedula);
+END
+GO
+
+-- Periodo sabático con informe aprobado: excepción del art. 77 e del CES
+IF OBJECT_ID('dbo.Sabaticos', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Sabaticos (
+        Id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Sabaticos PRIMARY KEY,
+        Cedula          CHAR(10) NOT NULL,
+        FechaInicio     DATE NOT NULL,
+        FechaFin        DATE NOT NULL,
+        InformeAprobado BIT NOT NULL CONSTRAINT DF_Sabaticos_Informe DEFAULT 0
+    );
+    CREATE INDEX IX_Sabaticos_Cedula ON dbo.Sabaticos (Cedula);
+END
+GO
