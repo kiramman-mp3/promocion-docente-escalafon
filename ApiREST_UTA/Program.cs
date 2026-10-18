@@ -1,6 +1,7 @@
 ﻿using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Infrastructure.Repositories;
+using ApiREST_UTA.Infrastructure.Documentos;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -84,6 +85,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<RequisitoService>();
             builder.Services.AddScoped<EvidenciaService>();
             builder.Services.AddScoped<ComisionService>();
+            builder.Services.AddSingleton<IGeneradorActo, GeneradorActo>();
             builder.Services.AddScoped<AuthService>(sp =>
                 new AuthService(sp.GetRequiredService<IUsuarioRepository>(), sp.GetRequiredService<IComisionRepository>(), jwtKey));
 

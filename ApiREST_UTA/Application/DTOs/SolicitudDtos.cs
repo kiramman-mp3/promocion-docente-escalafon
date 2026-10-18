@@ -92,6 +92,11 @@ namespace ApiREST_UTA.Application.DTOs
         public string? ResueltoPor { get; set; }
         public DateTime? FechaResolucion { get; set; }
         public string? Observacion { get; set; }
+        public bool ActoDisponible { get; set; }
+        public string? ActoHash { get; set; }
+        public string? AccionPersonalNumero { get; set; }
+        public DateTime? AccionPersonalFecha { get; set; }
+        public DateTime? FechaEjecucion { get; set; }
 
         // Solo en el detalle
         public DictamenPromocion? Dictamen { get; set; }
@@ -99,6 +104,12 @@ namespace ApiREST_UTA.Application.DTOs
         public List<DocumentoSolicitudResponse>? Documentos { get; set; }
         public List<VotoResponse>? Votos { get; set; }
         public VotacionResponse? Votacion { get; set; }
+    }
+
+    public class AccionPersonalRequest
+    {
+        public string Numero { get; set; } = string.Empty;
+        public DateTime Fecha { get; set; }
     }
 
     public class MiembroComisionRequest

@@ -64,6 +64,21 @@ namespace ApiREST_UTA.API.Controllers
         public Task<IActionResult> CerrarVotacion(int id, [FromBody] CerrarVotacionRequest request) =>
             Ejecutar(async () => Ok(await _service.CerrarVotacionAsync(id, request, User)));
 
+        // Resolución de la Comisión en PDF (acto administrativo, CES art. 77 l)
+        [HttpGet("{id:int}/acto")]
+        public Task<IActionResult> DescargarActo(int id) =>
+            Ejecutar(async () =>
+            {
+                var (pdf, nombre) = await _service.DescargarActoAsync(id, User);
+                return File(pdf, "application/pdf", nombre);
+            });
+
+        // Talento Humano registra la acción de personal: la solicitud pasa a Ejecutada
+        [HttpPut("{id:int}/accion-personal")]
+        [Authorize(Roles = RolesSistema.Revisores)]
+        public Task<IActionResult> RegistrarAccionPersonal(int id, [FromBody] AccionPersonalRequest request) =>
+            Ejecutar(async () => Ok(await _service.RegistrarAccionPersonalAsync(id, request, User)));
+
         private async Task<IActionResult> Ejecutar(Func<Task<IActionResult>> accion)
         {
             try
