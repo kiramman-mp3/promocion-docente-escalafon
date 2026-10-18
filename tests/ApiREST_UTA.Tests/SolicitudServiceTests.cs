@@ -17,6 +17,8 @@ namespace ApiREST_UTA.Tests
         private readonly Mock<IComisionRepository> _comision = new();
         private readonly Mock<IRRHHRepository> _rrhh = new();
         private readonly Mock<IRequisitoRepository> _requisitos = new();
+        private readonly Mock<IGeneradorActo> _actos = new();
+        private readonly Mock<IUsuarioRepository> _usuarios = new();
 
         private static readonly MiembroComision Presidente = new() { Id = 1, UsuarioId = 10, Cargo = MiembroComision.VicerrectorAcademico, EsPresidente = true };
         private static readonly MiembroComision Financiero = new() { Id = 5, UsuarioId = 11, Cargo = MiembroComision.DirectorFinanciero };
@@ -68,7 +70,9 @@ namespace ApiREST_UTA.Tests
 
             var promocion = new PromocionService(roles.Object, _rrhh.Object, obras.Object, evaluaciones.Object, cursos.Object,
                 equivalencias.Object, proyectos.Object, tesis.Object, _requisitos.Object);
-            return new SolicitudService(_solicitudes.Object, promocion, _comision.Object, investigaciones.Object, evidencias.Object);
+            _actos.Setup(a => a.Generar(It.IsAny<DatosActo>())).Returns(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4 acto"));
+            return new SolicitudService(_solicitudes.Object, promocion, _comision.Object, investigaciones.Object, evidencias.Object,
+                _actos.Object, _usuarios.Object);
         }
 
         private void ConSolicitud(int id, string estado, string cedula = Usuarios.CedulaAna) =>
@@ -326,6 +330,56 @@ namespace ApiREST_UTA.Tests
             };
 
             Assert.Equal(SolicitudPromocion.Rechazada, SolicitudService.ResultadoVotacion(votos).Estado);
+        }
+
+        // ---------- Acto administrativo y acción de personal (CES art. 77 l) ----------
+
+        [Fact]
+        public async Task Art77l_AlCerrarLaVotacionSeEmiteElActoConSuHuella()
+        {
+            ConSolicitud(1, SolicitudPromocion.EnComision);
+            ComoMiembro(Presidente);
+            _comision.Setup(r => r.ObtenerVotosAsync(1)).ReturnsAsync(new List<VotoComision>
+            {
+                Voto(Presidente, VotoComision.AFavor), Voto(Financiero, VotoComision.AFavor, true),
+                Voto(new MiembroComision { Id = 7 }, VotoComision.AFavor), Voto(new MiembroComision { Id = 8 }, VotoComision.AFavor)
+            });
+            _solicitudes.Setup(r => r.ResolverAsync(1, SolicitudPromocion.EnComision, SolicitudPromocion.Aprobada, It.IsAny<string>(), It.IsAny<string?>(), Presidente.UsuarioId))
+                .ReturnsAsync(true);
+
+            await Servicio().CerrarVotacionAsync(1, new CerrarVotacionRequest { Motivacion = "Cumple los requisitos" }, Usuarios.Administrador(id: Presidente.UsuarioId));
+
+            _actos.Verify(a => a.Generar(It.Is<DatosActo>(d => d.Solicitud.Id == 1 && d.Votos.Count == 4)));
+            _solicitudes.Verify(r => r.GuardarActoAsync(1, It.IsAny<byte[]>(), It.Is<string>(h => h.Length == 64)));
+        }
+
+        [Fact]
+        public async Task Art77l_AccionDePersonal_SoloEnSolicitudesAprobadas()
+        {
+            ConSolicitud(1, SolicitudPromocion.Rechazada);
+            var request = new AccionPersonalRequest { Numero = "AP-2026-0100", Fecha = DateTime.Today };
+
+            Assert.Equal(StatusCodes.Status409Conflict, await CodigoDeError(() => Servicio().RegistrarAccionPersonalAsync(1, request, Usuarios.Rrhh())));
+        }
+
+        [Fact]
+        public async Task Art77l_AccionDePersonalConFechaFutura_Da400()
+        {
+            ConSolicitud(1, SolicitudPromocion.Aprobada);
+            var request = new AccionPersonalRequest { Numero = "AP-2026-0100", Fecha = DateTime.Today.AddDays(3) };
+
+            Assert.Equal(StatusCodes.Status400BadRequest, await CodigoDeError(() => Servicio().RegistrarAccionPersonalAsync(1, request, Usuarios.Rrhh())));
+        }
+
+        [Fact]
+        public async Task Art77l_AccionDePersonal_EjecutaLaPromocion()
+        {
+            ConSolicitud(1, SolicitudPromocion.Aprobada);
+            _solicitudes.Setup(r => r.RegistrarAccionPersonalAsync(1, "AP-2026-0100", DateTime.Today, 2)).ReturnsAsync(true);
+
+            await Servicio().RegistrarAccionPersonalAsync(1, new AccionPersonalRequest { Numero = " AP-2026-0100 ", Fecha = DateTime.Today }, Usuarios.Rrhh(id: 2));
+
+            _solicitudes.Verify(r => r.RegistrarAccionPersonalAsync(1, "AP-2026-0100", DateTime.Today, 2));
         }
 
         // ---------- Visibilidad ----------

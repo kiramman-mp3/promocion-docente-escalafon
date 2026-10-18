@@ -23,19 +23,25 @@ namespace ApiREST_UTA.Application.Services
         private readonly IComisionRepository _comision;
         private readonly IInvestigacionRepository _investigaciones;
         private readonly IEvidenciaRepository _evidencias;
+        private readonly IGeneradorActo _actos;
+        private readonly IUsuarioRepository _usuarios;
 
         public SolicitudService(
             ISolicitudRepository solicitudRepo,
             PromocionService promocion,
             IComisionRepository comision,
             IInvestigacionRepository investigaciones,
-            IEvidenciaRepository evidencias)
+            IEvidenciaRepository evidencias,
+            IGeneradorActo actos,
+            IUsuarioRepository usuarios)
         {
             _solicitudRepo = solicitudRepo;
             _promocion = promocion;
             _comision = comision;
             _investigaciones = investigaciones;
             _evidencias = evidencias;
+            _actos = actos;
+            _usuarios = usuarios;
         }
 
         public async Task<SolicitudResponse> CrearAsync(string cedula, ClaimsPrincipal usuario)
@@ -219,6 +225,7 @@ namespace ApiREST_UTA.Application.Services
             var (estado, explicacion) = ResultadoVotacion(votos);
 
             await ResolverAsync(solicitud, SolicitudPromocion.EnComision, estado, $"{request.Motivacion.Trim()} {explicacion}", usuario);
+            await GenerarActoAsync(id);
             return (await ObtenerAsync(id, usuario))!;
         }
 
@@ -257,6 +264,53 @@ namespace ApiREST_UTA.Application.Services
             var numero = solicitud.NumeroResolucion ?? $"CAP-{DateTime.UtcNow:yyyy}-{solicitud.Id:D4}";
             if (!await _solicitudRepo.ResolverAsync(solicitud.Id, estadoEsperado, nuevoEstado, numero, motivacion, usuario.Id()))
                 throw ReglaNegocioException.Conflicto("La solicitud cambió de estado mientras se resolvía.");
+        }
+
+        // Genera y guarda el PDF de la resolución (CES art. 77 l) con su huella SHA-256
+        public async Task GenerarActoAsync(int id, string? resolucionApelacion = null, string? motivacionApelacion = null)
+        {
+            var solicitud = await _solicitudRepo.ObtenerPorIdAsync(id)
+                ?? throw ReglaNegocioException.NoEncontrado("La solicitud no existe.");
+            var docente = await _usuarios.ObtenerPorCedulaAsync(solicitud.Cedula);
+            var pdf = _actos.Generar(new DatosActo
+            {
+                Solicitud = solicitud,
+                NombreDocente = docente == null ? $"el docente con cédula {solicitud.Cedula}" : $"{docente.Nombre} {docente.Apellido}",
+                Dictamen = string.IsNullOrEmpty(solicitud.DictamenJson) ? null : JsonSerializer.Deserialize<DictamenPromocion>(solicitud.DictamenJson, JsonWeb),
+                Votos = await _comision.ObtenerVotosAsync(id),
+                Presidente = solicitud.ResueltoPor,
+                ResolucionApelacion = resolucionApelacion,
+                MotivacionApelacion = motivacionApelacion
+            });
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(pdf)).ToLowerInvariant();
+            await _solicitudRepo.GuardarActoAsync(id, pdf, hash);
+        }
+
+        public async Task<(byte[] Pdf, string NombreArchivo)> DescargarActoAsync(int id, ClaimsPrincipal usuario)
+        {
+            var solicitud = await _solicitudRepo.ObtenerPorIdAsync(id)
+                ?? throw ReglaNegocioException.NoEncontrado("La solicitud no existe.");
+            if (!usuario.PuedeVerSolicitud(solicitud))
+                throw ReglaNegocioException.Prohibido("No tienes acceso a esta solicitud.");
+            var pdf = await _solicitudRepo.ObtenerActoAsync(id)
+                ?? throw ReglaNegocioException.NoEncontrado("La solicitud todavía no tiene una resolución emitida.");
+            return (pdf, $"{solicitud.NumeroResolucion ?? $"solicitud-{id}"}.pdf");
+        }
+
+        // Talento Humano registra la acción de personal que ejecuta la promoción aprobada (CES art. 77 l)
+        public async Task<SolicitudResponse> RegistrarAccionPersonalAsync(int id, AccionPersonalRequest request, ClaimsPrincipal usuario)
+        {
+            var solicitud = await ObtenerEnEstadoAsync(id, SolicitudPromocion.Aprobada);
+            if (string.IsNullOrWhiteSpace(request.Numero))
+                throw ReglaNegocioException.Invalido("Indica el número de la acción de personal.");
+            if (request.Fecha == default || request.Fecha.Date > DateTime.Today)
+                throw ReglaNegocioException.Invalido("Indica una fecha válida, que no sea futura, para la acción de personal.");
+            if (solicitud.FechaResolucion.HasValue && request.Fecha.Date < solicitud.FechaResolucion.Value.Date)
+                throw ReglaNegocioException.Invalido("La acción de personal no puede ser anterior a la resolución.");
+
+            if (!await _solicitudRepo.RegistrarAccionPersonalAsync(id, request.Numero.Trim(), request.Fecha, usuario.Id()))
+                throw ReglaNegocioException.Conflicto("La solicitud cambió de estado mientras se registraba la acción de personal.");
+            return (await ObtenerAsync(id, usuario))!;
         }
 
         private async Task<SolicitudPromocion> ObtenerEnEstadoAsync(int id, string estado)
@@ -393,7 +447,12 @@ namespace ApiREST_UTA.Application.Services
             NumeroResolucion = s.NumeroResolucion,
             ResueltoPor = s.ResueltoPor,
             FechaResolucion = s.FechaResolucion,
-            Observacion = s.Observacion
+            Observacion = s.Observacion,
+            ActoDisponible = s.ActoHash != null,
+            ActoHash = s.ActoHash,
+            AccionPersonalNumero = s.AccionPersonalNumero,
+            AccionPersonalFecha = s.AccionPersonalFecha,
+            FechaEjecucion = s.FechaEjecucion
         };
 
         private static RevisionDocumentoResponse AResponse(RevisionDocumento r) => new()

@@ -19,5 +19,10 @@ namespace ApiREST_UTA.Domain.Interfaces
         // Cada transición cambia el estado solo si la solicitud sigue en el estado esperado; devuelve false si otro usuario se adelantó
         Task<bool> EnviarAComisionAsync(int id, int usuarioId, string dictamenJson);
         Task<bool> ResolverAsync(int id, string estadoEsperado, string nuevoEstado, string numeroResolucion, string? observacion, int resueltoPorId);
+
+        // Acto administrativo (CES art. 77 l) y su ejecución mediante acción de personal
+        Task GuardarActoAsync(int id, byte[] pdf, string hash);
+        Task<byte[]?> ObtenerActoAsync(int id);
+        Task<bool> RegistrarAccionPersonalAsync(int id, string numero, DateTime fecha, int usuarioId);
     }
 }

@@ -214,3 +214,14 @@ BEGIN
     );
 END
 GO
+
+-- Acto administrativo de la resolución (CES art. 77 l) y ejecución por Talento Humano (acción de personal)
+IF COL_LENGTH('dbo.SolicitudesPromocion', 'ActoPdf') IS NULL
+    ALTER TABLE dbo.SolicitudesPromocion ADD
+        ActoPdf              VARBINARY(MAX) NULL,
+        ActoHash             CHAR(64) NULL,
+        AccionPersonalNumero NVARCHAR(50) NULL,
+        AccionPersonalFecha  DATE NULL,
+        EjecutadaPorId       INT NULL CONSTRAINT FK_SolicitudesPromocion_EjecutadaPor REFERENCES dbo.Usuarios (Id),
+        FechaEjecucion       DATETIME2 NULL;
+GO
