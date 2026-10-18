@@ -1,22 +1,34 @@
 import type {
+  CargoComision,
   Curso,
+  Dictamen,
   EstadoRevision,
+  EstadoSalud,
   EstadoSolicitud,
+  Equivalencia,
   Evaluacion,
+  EvidenciaArchivo,
   Expediente,
   Investigacion,
+  MiembroComision,
   Obra,
-  ResultadoPromocion,
+  OpcionVoto,
+  PaginaAuditoria,
+  Proyecto,
+  ReporteUso,
+  RequisitoPromocion,
   RolEscalafon,
   RolSistema,
   Sesion,
   Solicitud,
   TiempoRol,
   TipoDocumento,
+  TrabajoTitulacion,
+  Trayectoria,
   Usuario,
 } from "./types";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5270").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:5270").replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -24,16 +36,17 @@ export class ApiError extends Error {
   }
 }
 
-async function pedir<T>(metodo: string, ruta: string, token?: string, cuerpo?: unknown): Promise<T> {
+async function enviar(metodo: string, ruta: string, token?: string, cuerpo?: unknown): Promise<Response> {
+  const esFormulario = cuerpo instanceof FormData;
   let respuesta: Response;
   try {
     respuesta = await fetch(`${API_URL}${ruta}`, {
       method: metodo,
       headers: {
-        ...(cuerpo !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(cuerpo !== undefined && !esFormulario ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
+      body: cuerpo === undefined ? undefined : esFormulario ? cuerpo : JSON.stringify(cuerpo),
     });
   } catch {
     throw new ApiError(0, `No se pudo conectar con la API en ${API_URL}. Revisa que esté encendida.`);
@@ -43,7 +56,9 @@ async function pedir<T>(metodo: string, ruta: string, token?: string, cuerpo?: u
     let mensaje =
       respuesta.status === 403
         ? "Tu usuario no tiene permiso para esta acción."
-        : `La API respondió ${respuesta.status}.`;
+        : respuesta.status === 429
+          ? "Demasiados intentos. Espera un minuto e intenta de nuevo."
+          : `La API respondió ${respuesta.status}.`;
     try {
       const datos = await respuesta.json();
       if (typeof datos?.mensaje === "string") mensaje = datos.mensaje;
@@ -52,15 +67,20 @@ async function pedir<T>(metodo: string, ruta: string, token?: string, cuerpo?: u
     }
     throw new ApiError(respuesta.status, mensaje);
   }
+  return respuesta;
+}
+
+async function pedir<T>(metodo: string, ruta: string, token?: string, cuerpo?: unknown): Promise<T> {
+  const respuesta = await enviar(metodo, ruta, token, cuerpo);
   if (respuesta.status === 204) return undefined as T;
   return respuesta.json() as Promise<T>;
 }
 
 const post = <T>(ruta: string, cuerpo: unknown, token?: string) => pedir<T>("POST", ruta, token, cuerpo);
 const put = <T>(ruta: string, cuerpo: unknown, token: string) => pedir<T>("PUT", ruta, token, cuerpo);
-const get = <T>(ruta: string, token: string) => pedir<T>("GET", ruta, token);
+const get = <T>(ruta: string, token?: string) => pedir<T>("GET", ruta, token);
 
-// Los endpoints de listas responden 404 cuando no hay registros: para el expediente eso es una lista vacía.
+// Compatibilidad: versiones anteriores de la API respondían 404 a las listas vacías
 async function lista<T>(ruta: string, cuerpo: unknown, token: string): Promise<T[]> {
   try {
     return await post<T[]>(ruta, cuerpo, token);
@@ -77,36 +97,36 @@ export function iniciarSesion(correo: string, contrasena: string): Promise<Sesio
 }
 
 export function listarRoles(): Promise<RolEscalafon[]> {
-  return pedir<RolEscalafon[]>("GET", "/api/roles");
+  return get<RolEscalafon[]>("/api/roles");
 }
 
-// ---------- Expediente ----------
+// ---------- Expediente y dictamen ----------
 
-export async function cargarExpediente(cedula: string, token: string, roles: RolEscalafon[]): Promise<Expediente> {
+export function obtenerDictamen(cedula: string, token: string): Promise<Dictamen> {
+  return post<Dictamen>("/api/promocion/validar", { cedula }, token);
+}
+
+export async function cargarExpediente(cedula: string, token: string): Promise<Expediente> {
   const tiempo = await post<TiempoRol>("/api/importar/tiempo-rol", { cedula }, token);
-  const rolActual = roles.find((r) => r.nombre.toLowerCase() === tiempo.rolActual.trim().toLowerCase());
-  if (!rolActual) {
-    throw new ApiError(422, `El rol "${tiempo.rolActual}" registrado en RRHH no está en el escalafón.`);
-  }
-  const esUltimoRol = rolActual.id === Math.max(...roles.map((r) => r.id));
 
-  const validar = esUltimoRol
-    ? Promise.resolve({ resultado: null, errorResultado: `${rolActual.nombre} es el último rol del escalafón.` })
-    : post<ResultadoPromocion>("/api/promocion/validar", { cedula, rolActualId: rolActual.id }, token)
-        .then((resultado) => ({ resultado, errorResultado: null }))
-        .catch((e: unknown) => {
-          if (e instanceof ApiError && (e.status === 401 || e.status === 403)) throw e;
-          return { resultado: null, errorResultado: "La API no pudo calcular el dictamen para este docente." };
-        });
+  const dictamen = obtenerDictamen(cedula, token)
+    .then((d) => ({ dictamen: d, errorDictamen: null }))
+    .catch((e: unknown) => {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) throw e;
+      return { dictamen: null, errorDictamen: e instanceof Error ? e.message : "No se pudo calcular el dictamen." };
+    });
 
-  const [dictamen, obras, cursos, investigaciones, evaluaciones, tesis, idioma, proyectos, impartida] =
+  const [d, obras, cursos, investigaciones, evaluaciones, proyectos, trabajos, equivalencias, trayectoria, idioma, ponderados, impartida] =
     await Promise.all([
-      validar,
-      lista<Obra>("/api/importar/obras", { cedula, fechaInicio: tiempo.fechaInicio }, token),
+      dictamen,
+      lista<Obra>("/api/importar/obras", { cedula }, token),
       lista<Curso>("/api/importar/cursos", { cedula }, token),
       lista<Investigacion>("/api/importar/investigaciones", { cedula }, token),
       lista<Evaluacion>("/api/importar/evaluaciones", { cedula }, token),
-      post<{ cantidad: number }>("/api/importar/tesis-doctorado", { cedula }, token),
+      lista<Proyecto>("/api/importar/proyectos", { cedula }, token),
+      lista<TrabajoTitulacion>("/api/importar/trabajos-titulacion", { cedula }, token),
+      lista<Equivalencia>("/api/importar/equivalencias", { cedula }, token),
+      post<Trayectoria>("/api/importar/trayectoria", { cedula }, token),
       post<{ tieneObraEnOtroIdioma: boolean }>("/api/importar/obras-idioma", { cedula }, token),
       post<{ mesesPonderados: number }>("/api/importar/proyectos-ponderados", { cedula }, token),
       post<{ horasImpartidas: number }>("/api/importar/capacitacion-impartida", { cedula }, token),
@@ -114,15 +134,17 @@ export async function cargarExpediente(cedula: string, token: string, roles: Rol
 
   return {
     tiempo,
-    rolActualId: rolActual.id,
-    ...dictamen,
+    ...d,
     obras,
     cursos,
     investigaciones,
     evaluaciones,
-    tesisDirigidas: tesis.cantidad,
+    proyectos,
+    trabajosTitulacion: trabajos,
+    equivalencias,
+    trayectoria,
     tieneObraEnOtroIdioma: idioma.tieneObraEnOtroIdioma,
-    mesesPonderados: proyectos.mesesPonderados,
+    mesesPonderados: ponderados.mesesPonderados,
     horasImpartidas: impartida.horasImpartidas,
   };
 }
@@ -149,13 +171,112 @@ export function revisarDocumento(
   return put<Solicitud>(`/api/solicitudes/${id}/documentos`, revision, token);
 }
 
-export function resolverSolicitud(
+export function enviarAComision(id: number, token: string): Promise<Solicitud> {
+  return post<Solicitud>(`/api/solicitudes/${id}/enviar-comision`, {}, token);
+}
+
+export function votar(
   id: number,
-  estado: "Aprobada" | "Rechazada",
-  observacion: string,
+  voto: { voto: OpcionVoto; motivacion: string; certificaPresupuesto?: boolean },
   token: string,
 ): Promise<Solicitud> {
-  return put<Solicitud>(`/api/solicitudes/${id}/resolucion`, { estado, observacion }, token);
+  return put<Solicitud>(`/api/solicitudes/${id}/votos`, voto, token);
+}
+
+export function cerrarVotacion(id: number, motivacion: string, token: string): Promise<Solicitud> {
+  return post<Solicitud>(`/api/solicitudes/${id}/cerrar-votacion`, { motivacion }, token);
+}
+
+export function registrarAccionPersonal(id: number, numero: string, fecha: string, token: string): Promise<Solicitud> {
+  return put<Solicitud>(`/api/solicitudes/${id}/accion-personal`, { numero, fecha }, token);
+}
+
+export function apelar(id: number, fundamentos: string, token: string): Promise<Solicitud> {
+  return post<Solicitud>(`/api/solicitudes/${id}/apelacion`, { fundamentos }, token);
+}
+
+export function resolverApelacion(
+  id: number,
+  datos: { aceptada: boolean; resolucionHCU: string; motivacion: string },
+  token: string,
+): Promise<Solicitud> {
+  return put<Solicitud>(`/api/solicitudes/${id}/apelacion/resolucion`, datos, token);
+}
+
+export function listarEvidencias(id: number, token: string): Promise<EvidenciaArchivo[]> {
+  return get<EvidenciaArchivo[]>(`/api/solicitudes/${id}/evidencias`, token);
+}
+
+export function subirEvidencia(id: number, archivo: File, tipo: string, descripcion: string, token: string): Promise<EvidenciaArchivo> {
+  const datos = new FormData();
+  datos.append("archivo", archivo);
+  datos.append("tipo", tipo);
+  datos.append("descripcion", descripcion);
+  return pedir<EvidenciaArchivo>("POST", `/api/solicitudes/${id}/evidencias`, token, datos);
+}
+
+// Descarga un PDF protegido (acto o evidencia) y lo abre en otra pestaña
+export async function abrirPdfProtegido(ruta: string, token: string) {
+  const respuesta = await enviar("GET", ruta, token);
+  const url = URL.createObjectURL(await respuesta.blob());
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+// ---------- Comisión Académica ----------
+
+export function listarMiembrosComision(token: string, historico = false): Promise<MiembroComision[]> {
+  return get<MiembroComision[]>(`/api/comision/miembros${historico ? "?historico=true" : ""}`, token);
+}
+
+export function agregarMiembroComision(
+  datos: { usuarioId: number; cargo: CargoComision; esPresidente: boolean },
+  token: string,
+): Promise<MiembroComision> {
+  return post<MiembroComision>("/api/comision/miembros", datos, token);
+}
+
+export function finalizarMiembroComision(id: number, token: string): Promise<void> {
+  return post<void>(`/api/comision/miembros/${id}/finalizar`, {}, token);
+}
+
+// ---------- Requisitos de promoción ----------
+
+export function listarRequisitos(historico = false): Promise<RequisitoPromocion[]> {
+  return get<RequisitoPromocion[]>(`/api/requisitos${historico ? "?historico=true" : ""}`);
+}
+
+export type NuevoRequisito = Omit<RequisitoPromocion, "id" | "rolOrigen" | "gradoDestino" | "rolDestino" | "vigenteHasta" | "vigente">;
+
+export function crearRequisito(datos: NuevoRequisito, token: string): Promise<RequisitoPromocion> {
+  return post<RequisitoPromocion>("/api/requisitos", datos, token);
+}
+
+// ---------- Operación (Administrador) ----------
+
+export function consultarAuditoria(
+  filtro: { desde?: string; hasta?: string; accion?: string; pagina: number },
+  token: string,
+): Promise<PaginaAuditoria> {
+  const parametros = new URLSearchParams({ pagina: String(filtro.pagina), tamanoPagina: "25" });
+  if (filtro.desde) parametros.set("desde", filtro.desde);
+  if (filtro.hasta) parametros.set("hasta", filtro.hasta);
+  if (filtro.accion) parametros.set("accion", filtro.accion);
+  return get<PaginaAuditoria>(`/api/auditoria?${parametros}`, token);
+}
+
+export function reporteUso(token: string): Promise<ReporteUso> {
+  return get<ReporteUso>("/api/reportes/uso", token);
+}
+
+// /health responde 503 cuando una base no está disponible, pero el cuerpo trae el detalle
+export async function estadoSalud(): Promise<EstadoSalud> {
+  try {
+    const respuesta = await fetch(`${API_URL}/health`);
+    return (await respuesta.json()) as EstadoSalud;
+  } catch {
+    throw new ApiError(0, `No se pudo conectar con la API en ${API_URL}.`);
+  }
 }
 
 // ---------- Usuarios (Administrador) ----------
