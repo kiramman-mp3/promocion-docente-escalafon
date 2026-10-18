@@ -7,12 +7,7 @@ IF OBJECT_ID('dbo.Roles', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Roles (
         Id                          INT NOT NULL CONSTRAINT PK_Roles PRIMARY KEY,
-        Nombre                      NVARCHAR(50) NOT NULL CONSTRAINT UQ_Roles_Nombre UNIQUE,
-        RequiereAniosEnRol          INT NOT NULL CONSTRAINT DF_Roles_Anios DEFAULT 0,
-        RequiereObras               INT NOT NULL CONSTRAINT DF_Roles_Obras DEFAULT 0,
-        RequiereEvaluacion          DECIMAL(5,2) NOT NULL CONSTRAINT DF_Roles_Eval DEFAULT 0,
-        RequiereCapacitacionHoras   INT NOT NULL CONSTRAINT DF_Roles_Cap DEFAULT 0,
-        RequiereInvestigacionMeses  INT NOT NULL CONSTRAINT DF_Roles_Inv DEFAULT 0
+        Nombre                      NVARCHAR(50) NOT NULL CONSTRAINT UQ_Roles_Nombre UNIQUE
     );
 END
 GO
@@ -85,5 +80,13 @@ BEGIN
         InformeAprobado BIT NOT NULL CONSTRAINT DF_Sabaticos_Informe DEFAULT 0
     );
     CREATE INDEX IX_Sabaticos_Cedula ON dbo.Sabaticos (Cedula);
+END
+GO
+
+-- Las columnas Requiere* del primer modelo se reemplazaron por DITIC.dbo.RequisitosPromocion
+IF COL_LENGTH('dbo.Roles', 'RequiereObras') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.Roles DROP CONSTRAINT DF_Roles_Anios, DF_Roles_Obras, DF_Roles_Eval, DF_Roles_Cap, DF_Roles_Inv;
+    ALTER TABLE dbo.Roles DROP COLUMN RequiereAniosEnRol, RequiereObras, RequiereEvaluacion, RequiereCapacitacionHoras, RequiereInvestigacionMeses;
 END
 GO

@@ -109,3 +109,8 @@ IF COL_LENGTH('dbo.SolicitudesPromocion', 'RequisitosPromocionId') IS NULL
     ALTER TABLE dbo.SolicitudesPromocion ADD RequisitosPromocionId INT NULL
         CONSTRAINT FK_SolicitudesPromocion_Requisitos REFERENCES dbo.RequisitosPromocion (Id);
 GO
+
+-- Dictamen calculado al presentar la solicitud (JSON), para conservar la evaluación con la que se presentó
+IF COL_LENGTH('dbo.SolicitudesPromocion', 'DictamenJson') IS NULL
+    ALTER TABLE dbo.SolicitudesPromocion ADD DictamenJson NVARCHAR(MAX) NULL;
+GO
