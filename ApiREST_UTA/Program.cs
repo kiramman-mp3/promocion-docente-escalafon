@@ -5,12 +5,15 @@ using ApiREST_UTA.Infrastructure.Repositories;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 namespace ApiREST_UTA
 {
     public class Program
     {
+        private const string PoliticaCorsFrontend = "Frontend";
+
         public static void Main(string[] args)
         {
             // Carga el .env de la raíz del repo (si existe) sin pisar variables ya definidas, p. ej. por docker
@@ -77,6 +80,17 @@ namespace ApiREST_UTA
 
             builder.Services.AddControllers();
 
+            // CORS: orígenes permitidos separados por coma en CORS_ORIGINS (por defecto el frontend de Vite)
+            var origenesPermitidos = (builder.Configuration["CORS_ORIGINS"] ?? "http://localhost:5173")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy(PoliticaCorsFrontend, policy => policy
+                    .WithOrigins(origenesPermitidos)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod());
+            });
+
             // Configuración de JWT Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -94,10 +108,44 @@ namespace ApiREST_UTA
                 });
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "API Promoción Docente UTA",
+                    Version = "v1",
+                    Description = "Importa la información del docente desde DITIC, RRHH, DIDE, DEaDV y DAC y valida los requisitos de promoción en el escalafón."
+                });
+
+                // Botón "Authorize": pega el token devuelto por POST /api/Auth/login
+                var esquemaJwt = new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Description = "Token JWT obtenido en /api/Auth/login (sin el prefijo 'Bearer').",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                };
+                options.AddSecurityDefinition("Bearer", esquemaJwt);
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement { [esquemaJwt] = Array.Empty<string>() });
+            });
 
             var app = builder.Build();
 
+            // Swagger en Development, o en cualquier entorno con SWAGGER_ENABLED=true
+            if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("SWAGGER_ENABLED"))
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Promoción Docente UTA v1");
+                    options.DocumentTitle = "API Promoción Docente UTA";
+                });
+            }
+
+            app.UseCors(PoliticaCorsFrontend);
             app.UseAuthentication();
             app.UseAuthorization();
 
