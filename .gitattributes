@@ -3,3 +3,6 @@
 # Los scripts de shell se ejecutan dentro de contenedores Linux: siempre LF.
 *.sh text eol=lf
 Dockerfile text eol=lf
+
+# Docker compose lee .env: evitar CRLF que agregaría  a los valores.
+.env* text eol=lf
