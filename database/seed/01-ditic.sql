@@ -17,3 +17,12 @@ BEGIN
         (N'lucia.mora@uta.edu.ec',   @hash, N'Lucía Fernanda', N'Mora Andrade',  N'Docente',       '1712345678');
 END
 GO
+
+-- Solicitudes de ejemplo: Ana tiene una pendiente para que RRHH la revise.
+IF NOT EXISTS (SELECT 1 FROM dbo.SolicitudesPromocion)
+BEGIN
+    INSERT INTO dbo.SolicitudesPromocion (Cedula, RolActualId, RolActual, RolObjetivo, SolicitadoPorId)
+    SELECT '1801234567', 3, N'Agregado 1', N'Agregado 2', Id
+    FROM dbo.Usuarios WHERE Correo = N'ana.perez@uta.edu.ec';
+END
+GO

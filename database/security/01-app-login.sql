@@ -1,6 +1,6 @@
 /*
-  Crea el login de la API con permisos de solo lectura en las 5 bases.
-  La API únicamente ejecuta SELECT, así que no necesita usar 'sa'.
+  Crea el login de la API: lectura en las 5 bases y escritura solo en las tablas del sistema (DITIC).
+  La API no usa 'sa': solo tiene los permisos mínimos que necesita.
 
   Variables sqlcmd (las pasa docker/init-db.sh desde el .env):
     $(APP_DB_USER)      nombre del login
@@ -31,4 +31,13 @@ BEGIN
 END
 CLOSE dbs;
 DEALLOCATE dbs;
+GO
+
+-- Escritura solo en las tablas propias del sistema (DITIC): usuarios y flujo de aprobación.
+-- Las bases de las otras direcciones siguen siendo de solo lectura.
+USE DITIC;
+GO
+GRANT INSERT, UPDATE ON dbo.Usuarios TO [$(APP_DB_USER)];
+GRANT INSERT, UPDATE ON dbo.SolicitudesPromocion TO [$(APP_DB_USER)];
+GRANT INSERT, UPDATE ON dbo.RevisionesDocumento TO [$(APP_DB_USER)];
 GO
