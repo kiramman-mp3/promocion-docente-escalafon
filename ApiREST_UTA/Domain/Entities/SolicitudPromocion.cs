@@ -21,5 +21,11 @@ namespace ApiREST_UTA.Domain.Entities
         public string? Observacion { get; set; }
         public int? RequisitosPromocionId { get; set; }
         public string? DictamenJson { get; set; }
+
+        // El docente puede anexar evidencias mientras la solicitud está en revisión documental
+        public bool AdmiteEvidencias => Estado == Pendiente;
+
+        // La Comisión Académica ve la solicitud desde que Talento Humano se la envía
+        public bool LlegoAComision => Estado != Pendiente;
     }
 }
