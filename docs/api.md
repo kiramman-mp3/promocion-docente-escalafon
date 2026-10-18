@@ -90,7 +90,7 @@ Todos son `POST`, requieren token y aplican **cédula propia**. Cuerpo: `{ "cedu
 | `/api/importar/proyectos` | DIDE | `{ id, cedula, nombreProyecto, rol, tipoProyecto, meses, mesesPonderados, fechaInicio, fechaFin }` (`Director`, `Codirector`, `Participante`) |
 | `/api/importar/cursos` | DEaDV | `{ id, nombreCurso, horas, tipoCapacitacion, fechaInicio, fechaFin, … }` (`Pedagogica`, `Cientifica`, `CongresoInternacional`) |
 | `/api/importar/evaluaciones` | DEaDV | `{ id, periodo, periodoAcademico, puntaje, ejercioDocencia, pdf, … }` |
-| `/api/importar/equivalencias` | DEaDV `{ id, cedula, tipo, fecha, meses, descripcion, horasCapacitacion }`: evaluador externo, facilitador CES, par evaluador CACES (CES art. 77 g-i) |
+| `/api/importar/equivalencias` | DEaDV | `{ id, cedula, tipo, fecha, meses, descripcion, horasCapacitacion }`: evaluador externo, facilitador CES, par evaluador CACES (CES art. 77 g-i) |
 | `/api/importar/trabajos-titulacion` | DAC | `{ id, titulo, nivel, fechaAprobacion, … }` (`Grado`, `Maestria`, `Doctorado`) |
 | `/api/importar/tesis-doctorado` | DAC | `{ cedula, cantidad }` de trabajos de doctorado |
 | `/api/importar/obras-idioma` | DIDE | `{ cedula, tieneObraEnOtroIdioma }` |
