@@ -19,6 +19,7 @@ namespace ApiREST_UTA.Tests
         private readonly Mock<IRequisitoRepository> _requisitos = new();
         private readonly Mock<IGeneradorActo> _actos = new();
         private readonly Mock<IUsuarioRepository> _usuarios = new();
+        private readonly Mock<IApelacionRepository> _apelaciones = new();
 
         private static readonly MiembroComision Presidente = new() { Id = 1, UsuarioId = 10, Cargo = MiembroComision.VicerrectorAcademico, EsPresidente = true };
         private static readonly MiembroComision Financiero = new() { Id = 5, UsuarioId = 11, Cargo = MiembroComision.DirectorFinanciero };
@@ -72,12 +73,13 @@ namespace ApiREST_UTA.Tests
                 equivalencias.Object, proyectos.Object, tesis.Object, _requisitos.Object);
             _actos.Setup(a => a.Generar(It.IsAny<DatosActo>())).Returns(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4 acto"));
             return new SolicitudService(_solicitudes.Object, promocion, _comision.Object, investigaciones.Object, evidencias.Object,
-                _actos.Object, _usuarios.Object);
+                _actos.Object, _usuarios.Object, _apelaciones.Object);
         }
 
-        private void ConSolicitud(int id, string estado, string cedula = Usuarios.CedulaAna) =>
+        private void ConSolicitud(int id, string estado, string cedula = Usuarios.CedulaAna, DateTime? fechaResolucion = null) =>
             _solicitudes.Setup(r => r.ObtenerPorIdAsync(id)).ReturnsAsync(new SolicitudPromocion
             {
+                FechaResolucion = fechaResolucion ?? DateTime.UtcNow,
                 Id = id,
                 Cedula = cedula,
                 RolActualId = 3,
@@ -380,6 +382,76 @@ namespace ApiREST_UTA.Tests
             await Servicio().RegistrarAccionPersonalAsync(1, new AccionPersonalRequest { Numero = " AP-2026-0100 ", Fecha = DateTime.Today }, Usuarios.Rrhh(id: 2));
 
             _solicitudes.Verify(r => r.RegistrarAccionPersonalAsync(1, "AP-2026-0100", DateTime.Today, 2));
+        }
+
+        // ---------- Apelación (COA arts. 217-218 y 224) ----------
+
+        [Theory]
+        [InlineData("2026-10-16", "2026-10-30")] // viernes: 10 días hábiles terminan el viernes siguiente al siguiente
+        [InlineData("2026-10-19", "2026-11-02")] // lunes
+        public void COA224_ElPlazoEsDeDiezDiasHabiles(string notificacion, string vence)
+        {
+            Assert.Equal(DateTime.Parse(vence), Apelacion.PlazoHasta(DateTime.Parse(notificacion)));
+        }
+
+        [Fact]
+        public async Task COA224_ApelacionFueraDePlazo_Da409()
+        {
+            ConSolicitud(1, SolicitudPromocion.Rechazada, fechaResolucion: DateTime.UtcNow.AddDays(-30));
+
+            Assert.Equal(StatusCodes.Status409Conflict, await CodigoDeError(() =>
+                Servicio().ApelarAsync(1, new ApelarRequest { Fundamentos = "Mis obras sí son relevantes" }, Usuarios.Docente())));
+        }
+
+        [Fact]
+        public async Task COA217_SoloElDocenteAfectadoApela()
+        {
+            ConSolicitud(1, SolicitudPromocion.Rechazada);
+
+            Assert.Equal(StatusCodes.Status403Forbidden, await CodigoDeError(() =>
+                Servicio().ApelarAsync(1, new ApelarRequest { Fundamentos = "x" }, Usuarios.Docente(cedula: Usuarios.CedulaCarlos))));
+        }
+
+        [Fact]
+        public async Task COA218_SoloSeApelaUnaVez()
+        {
+            ConSolicitud(1, SolicitudPromocion.Rechazada);
+            _apelaciones.Setup(r => r.ObtenerPorSolicitudAsync(1)).ReturnsAsync(new Apelacion { SolicitudId = 1, Fundamentos = "x", Estado = Apelacion.Negada });
+
+            Assert.Equal(StatusCodes.Status409Conflict, await CodigoDeError(() =>
+                Servicio().ApelarAsync(1, new ApelarRequest { Fundamentos = "Otra vez" }, Usuarios.Docente())));
+        }
+
+        [Fact]
+        public async Task COA217_ApelacionEnPlazo_SeRegistra()
+        {
+            ConSolicitud(1, SolicitudPromocion.Rechazada);
+            _apelaciones.Setup(r => r.PresentarAsync(It.IsAny<Apelacion>())).ReturnsAsync(true);
+
+            await Servicio().ApelarAsync(1, new ApelarRequest { Fundamentos = " Mis obras sí son relevantes " }, Usuarios.Docente(id: 3));
+
+            _apelaciones.Verify(r => r.PresentarAsync(It.Is<Apelacion>(a => a.SolicitudId == 1 && a.Fundamentos == "Mis obras sí son relevantes" && a.PresentadaPorId == 3)));
+        }
+
+        [Fact]
+        public async Task ApelacionAceptada_ApruebaYEmiteNuevoActo()
+        {
+            ConSolicitud(1, SolicitudPromocion.Apelada);
+            _apelaciones.Setup(r => r.ResolverAsync(1, Apelacion.Aceptada, "0500-HCU-2026", "Procede", 1)).ReturnsAsync(true);
+            _solicitudes.Setup(r => r.ResolverAsync(1, SolicitudPromocion.Apelada, SolicitudPromocion.Aprobada, It.IsAny<string>(), It.IsAny<string?>(), 1)).ReturnsAsync(true);
+
+            await Servicio().ResolverApelacionAsync(1, new ResolverApelacionRequest { Aceptada = true, ResolucionHCU = "0500-HCU-2026", Motivacion = "Procede" }, Usuarios.Administrador(id: 1));
+
+            _actos.Verify(a => a.Generar(It.Is<DatosActo>(d => d.ResolucionApelacion == "0500-HCU-2026")));
+        }
+
+        [Fact]
+        public async Task ResolverApelacionSinNumeroDeResolucion_Da400()
+        {
+            ConSolicitud(1, SolicitudPromocion.Apelada);
+
+            Assert.Equal(StatusCodes.Status400BadRequest, await CodigoDeError(() =>
+                Servicio().ResolverApelacionAsync(1, new ResolverApelacionRequest { Aceptada = false, Motivacion = "No procede" }, Usuarios.Administrador())));
         }
 
         // ---------- Visibilidad ----------
