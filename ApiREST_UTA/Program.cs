@@ -66,6 +66,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<IProyectoPonderadoRepository, ProyectoPonderadoRepository>();
             builder.Services.AddScoped<ICapacitacionImpartidaRepository, CapacitacionImpartidaRepository>();
             builder.Services.AddScoped<ISolicitudRepository, SolicitudRepository>();
+            builder.Services.AddScoped<IRequisitoRepository, RequisitoRepository>();
 
             // Inyección de servicios
             builder.Services.AddScoped<ObraService>();
@@ -78,6 +79,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<CapacitacionImpartidaService>();
             builder.Services.AddScoped<SolicitudService>();
             builder.Services.AddScoped<UsuarioService>();
+            builder.Services.AddScoped<RequisitoService>();
             builder.Services.AddScoped<AuthService>(sp =>
                 new AuthService(sp.GetRequiredService<IUsuarioRepository>(), jwtKey));
 

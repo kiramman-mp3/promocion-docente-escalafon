@@ -1,7 +1,6 @@
 ﻿using ApiREST_UTA.Domain.Entities;
 using ApiREST_UTA.Domain.Interfaces;
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace ApiREST_UTA.Infrastructure.Repositories
 {
@@ -24,7 +23,8 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
             SELECT TOP 1 Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion, 
-                         RequiereCapacitacionHoras, RequiereInvestigacionMeses
+                         RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+                   Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             WHERE Id > @rolActualId
             ORDER BY Id ASC", connection);
@@ -45,7 +45,8 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
             SELECT Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion,
-                   RequiereCapacitacionHoras, RequiereInvestigacionMeses
+                   RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+                   Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             WHERE Nombre = @nombre", connection);
 
@@ -56,13 +57,19 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             return await reader.ReadAsync() ? LeerRol(reader) : null;
         }
 
+        public async Task<Rol?> ObtenerPorIdAsync(int id)
+        {
+            return (await ListarAsync()).FirstOrDefault(r => r.Id == id);
+        }
+
         public async Task<List<Rol>> ListarAsync()
         {
             var roles = new List<Rol>();
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
             SELECT Id, Nombre, RequiereAniosEnRol, RequiereObras, RequiereEvaluacion,
-                   RequiereCapacitacionHoras, RequiereInvestigacionMeses
+                   RequiereCapacitacionHoras, RequiereInvestigacionMeses,
+                   Categoria, Nivel, Grado, PermanenciaAnios, Promocionable
             FROM Roles
             ORDER BY Id ASC", connection);
 
@@ -84,7 +91,12 @@ namespace ApiREST_UTA.Infrastructure.Repositories
                 RequiereObras = Convert.ToInt32(reader["RequiereObras"]),
                 RequiereEvaluacion = Convert.ToDecimal(reader["RequiereEvaluacion"]),
                 RequiereCapacitacionHoras = Convert.ToInt32(reader["RequiereCapacitacionHoras"]),
-                RequiereInvestigacionMeses = Convert.ToInt32(reader["RequiereInvestigacionMeses"])
+                RequiereInvestigacionMeses = Convert.ToInt32(reader["RequiereInvestigacionMeses"]),
+                Categoria = reader["Categoria"] == DBNull.Value ? null : reader["Categoria"].ToString(),
+                Nivel = reader["Nivel"] == DBNull.Value ? null : Convert.ToInt32(reader["Nivel"]),
+                Grado = reader["Grado"] == DBNull.Value ? null : Convert.ToInt32(reader["Grado"]),
+                PermanenciaAnios = reader["PermanenciaAnios"] == DBNull.Value ? null : Convert.ToInt32(reader["PermanenciaAnios"]),
+                Promocionable = Convert.ToBoolean(reader["Promocionable"])
             };
         }
     }
