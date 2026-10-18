@@ -38,6 +38,11 @@ describe("rutaPermitida", () => {
     expect(rutaPermitida({ vista: "comision" }, admin)).toBe(true);
   });
 
+  it("una autoridad fuera de la Comisión no consulta expedientes", () => {
+    expect(rutaPermitida({ vista: "consulta" }, acceso("Autoridad"))).toBe(false);
+    expect(rutaPermitida({ vista: "consulta" }, acceso("Autoridad", true))).toBe(true);
+  });
+
   it("la ruta de inicio nunca se muestra: redirige a la primera sección", () => {
     expect(rutaPermitida({ vista: "inicio" }, acceso("Administrador"))).toBe(false);
   });
