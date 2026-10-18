@@ -79,6 +79,16 @@ namespace ApiREST_UTA.API.Controllers
         public Task<IActionResult> RegistrarAccionPersonal(int id, [FromBody] AccionPersonalRequest request) =>
             Ejecutar(async () => Ok(await _service.RegistrarAccionPersonalAsync(id, request, User)));
 
+        // Apelación del docente (COA arts. 217 y 224) y registro de lo que resolvió el Consejo Universitario
+        [HttpPost("{id:int}/apelacion")]
+        public Task<IActionResult> Apelar(int id, [FromBody] ApelarRequest request) =>
+            Ejecutar(async () => Ok(await _service.ApelarAsync(id, request, User)));
+
+        [HttpPut("{id:int}/apelacion/resolucion")]
+        [Authorize(Roles = RolesSistema.Administrador)]
+        public Task<IActionResult> ResolverApelacion(int id, [FromBody] ResolverApelacionRequest request) =>
+            Ejecutar(async () => Ok(await _service.ResolverApelacionAsync(id, request, User)));
+
         private async Task<IActionResult> Ejecutar(Func<Task<IActionResult>> accion)
         {
             try
