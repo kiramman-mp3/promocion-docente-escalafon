@@ -1,7 +1,7 @@
 ﻿using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Domain.Entities;
-using ApiREST_UTA.Domain.Interfaces.ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Domain.Interfaces;
+using ApiREST_UTA.Domain.Interfaces.ApiREST_UTA.Domain.Interfaces;
 
 public class PromocionService
 {
