@@ -6,7 +6,8 @@ namespace ApiREST_UTA.Domain.Entities
         public const string Rechazado = "Rechazado";
 
         // Tipos de documento del expediente y la base de donde viene cada uno
-        public static readonly string[] Tipos = { "TiempoRol", "Obra", "Evaluacion", "Investigacion", "Curso" };
+        public static readonly string[] Tipos =
+            { "TiempoRol", "Obra", "Evaluacion", "Investigacion", "Curso", "Proyecto", "TrabajoTitulacion", "Equivalencia", "Evidencia" };
 
         public int Id { get; set; }
         public int SolicitudId { get; set; }

@@ -1,4 +1,5 @@
-﻿using ApiREST_UTA.Domain.Interfaces;
+﻿using ApiREST_UTA.Domain.Entities;
+using ApiREST_UTA.Domain.Interfaces;
 using Microsoft.Data.SqlClient;
 
 namespace ApiREST_UTA.Infrastructure.Repositories
@@ -12,34 +13,39 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             _connectionString = configuration.GetConnectionString("DIDEConnection")!;
         }
 
+        // Dirección x2 y codirección x1,5 (CES art. 36 c.2)
         public async Task<int> ObtenerMesesPonderadosAsync(string cedula)
         {
+            var proyectos = await ObtenerProyectosAsync(cedula);
+            return (int)proyectos.Sum(p => p.MesesPonderados);
+        }
+
+        public async Task<List<ProyectoParticipacion>> ObtenerProyectosAsync(string cedula)
+        {
+            var proyectos = new List<ProyectoParticipacion>();
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-                SELECT Rol, MesesParticipacion FROM ParticipacionProyecto
-                WHERE Cedula = @cedula", connection);
-
+                SELECT Id, Cedula, NombreProyecto, Rol, TipoProyecto, MesesParticipacion, FechaInicio, FechaFin
+                FROM ParticipacionProyecto WHERE Cedula = @cedula ORDER BY FechaInicio DESC", connection);
             command.Parameters.AddWithValue("@cedula", cedula);
 
             await connection.OpenAsync();
             using var reader = await command.ExecuteReaderAsync();
-
-            int totalMeses = 0;
-
             while (await reader.ReadAsync())
             {
-                string rol = reader["Rol"].ToString()!;
-                int meses = Convert.ToInt32(reader["MesesParticipacion"]);
-
-                totalMeses += rol switch
+                proyectos.Add(new ProyectoParticipacion
                 {
-                    "CoordinadorPrincipal" => meses * 2,
-                    "CoordinadorSubrogante" => (int)(meses * 1.5),
-                    _ => meses // Investigador normal
-                };
+                    Id = Convert.ToInt32(reader["Id"]),
+                    Cedula = reader["Cedula"].ToString()!,
+                    NombreProyecto = reader["NombreProyecto"] == DBNull.Value ? null : reader["NombreProyecto"].ToString(),
+                    Rol = reader["Rol"].ToString()!,
+                    TipoProyecto = reader["TipoProyecto"].ToString()!,
+                    Meses = Convert.ToInt32(reader["MesesParticipacion"]),
+                    FechaInicio = reader["FechaInicio"] == DBNull.Value ? null : Convert.ToDateTime(reader["FechaInicio"]),
+                    FechaFin = reader["FechaFin"] == DBNull.Value ? null : Convert.ToDateTime(reader["FechaFin"])
+                });
             }
-
-            return totalMeses;
+            return proyectos;
         }
     }
 }

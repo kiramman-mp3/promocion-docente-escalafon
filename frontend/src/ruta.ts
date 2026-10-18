@@ -7,6 +7,9 @@ export type Ruta =
   | { vista: "solicitudes" }
   | { vista: "solicitud"; id: number }
   | { vista: "usuarios" }
+  | { vista: "comision" }
+  | { vista: "requisitos" }
+  | { vista: "operacion" }
   | { vista: "inicio" };
 
 export function leerRuta(hash = window.location.hash): Ruta {
@@ -18,6 +21,12 @@ export function leerRuta(hash = window.location.hash): Ruta {
       return { vista: "consulta" };
     case "usuarios":
       return { vista: "usuarios" };
+    case "comision":
+      return { vista: "comision" };
+    case "requisitos":
+      return { vista: "requisitos" };
+    case "operacion":
+      return { vista: "operacion" };
     case "solicitudes": {
       const id = Number(partes[1]);
       return Number.isInteger(id) && id > 0 ? { vista: "solicitud", id } : { vista: "solicitudes" };

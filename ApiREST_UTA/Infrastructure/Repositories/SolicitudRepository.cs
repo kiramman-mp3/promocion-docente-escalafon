@@ -9,7 +9,9 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         private const string SelectSolicitud = @"
             SELECT s.Id, s.Cedula, s.RolActualId, s.RolActual, s.RolObjetivo, s.Estado,
                    s.SolicitadoPorId, CONCAT(us.Nombre, ' ', us.Apellido) AS SolicitadoPor, s.FechaSolicitud,
-                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion
+                   s.RequisitosPromocionId, s.DictamenJson, s.FechaEnvioComision, s.EnviadaComisionPorId, s.NumeroResolucion,
+                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion,
+                   s.ActoHash, s.AccionPersonalNumero, s.AccionPersonalFecha, s.EjecutadaPorId, s.FechaEjecucion
             FROM SolicitudesPromocion s
             JOIN Usuarios us ON us.Id = s.SolicitadoPorId
             LEFT JOIN Usuarios ur ON ur.Id = s.ResueltoPorId";
@@ -25,14 +27,17 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
-                INSERT INTO SolicitudesPromocion (Cedula, RolActualId, RolActual, RolObjetivo, SolicitadoPorId)
+                INSERT INTO SolicitudesPromocion (Cedula, RolActualId, RolActual, RolObjetivo, Estado, SolicitadoPorId, RequisitosPromocionId, DictamenJson)
                 OUTPUT INSERTED.Id
-                VALUES (@cedula, @rolActualId, @rolActual, @rolObjetivo, @solicitadoPorId)", connection);
+                VALUES (@cedula, @rolActualId, @rolActual, @rolObjetivo, @estado, @solicitadoPorId, @requisitosId, @dictamen)", connection);
             command.Parameters.AddWithValue("@cedula", solicitud.Cedula);
             command.Parameters.AddWithValue("@rolActualId", solicitud.RolActualId);
             command.Parameters.AddWithValue("@rolActual", solicitud.RolActual);
             command.Parameters.AddWithValue("@rolObjetivo", solicitud.RolObjetivo);
+            command.Parameters.AddWithValue("@estado", SolicitudPromocion.RevisionDocumental);
             command.Parameters.AddWithValue("@solicitadoPorId", solicitud.SolicitadoPorId);
+            command.Parameters.AddWithValue("@requisitosId", (object?)solicitud.RequisitosPromocionId ?? DBNull.Value);
+            command.Parameters.AddWithValue("@dictamen", (object?)solicitud.DictamenJson ?? DBNull.Value);
 
             await connection.OpenAsync();
             return Convert.ToInt32(await command.ExecuteScalarAsync());
@@ -49,16 +54,18 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             return await reader.ReadAsync() ? LeerSolicitud(reader) : null;
         }
 
-        public async Task<List<SolicitudPromocion>> ListarAsync(string? estado, string? cedula)
+        public async Task<List<SolicitudPromocion>> ListarAsync(string? estado, string? cedula, bool soloEnviadasAComision = false)
         {
             var solicitudes = new List<SolicitudPromocion>();
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(SelectSolicitud + @"
                 WHERE (@estado IS NULL OR s.Estado = @estado)
                   AND (@cedula IS NULL OR s.Cedula = @cedula)
-                ORDER BY CASE WHEN s.Estado = 'Pendiente' THEN 0 ELSE 1 END, s.FechaSolicitud DESC", connection);
+                  AND (@soloComision = 0 OR s.FechaEnvioComision IS NOT NULL)
+                ORDER BY CASE WHEN s.Estado IN ('RevisionDocumental', 'EnComision', 'Apelada') THEN 0 ELSE 1 END, s.FechaSolicitud DESC", connection);
             command.Parameters.AddWithValue("@estado", (object?)estado ?? DBNull.Value);
             command.Parameters.AddWithValue("@cedula", (object?)cedula ?? DBNull.Value);
+            command.Parameters.AddWithValue("@soloComision", soloEnviadasAComision);
 
             await connection.OpenAsync();
             using var reader = await command.ExecuteReaderAsync();
@@ -68,11 +75,12 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             return solicitudes;
         }
 
-        public async Task<bool> ExistePendienteAsync(string cedula)
+        public async Task<bool> ExisteEnTramiteAsync(string cedula)
         {
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand(
-                "SELECT COUNT(*) FROM SolicitudesPromocion WHERE Cedula = @cedula AND Estado = 'Pendiente'", connection);
+            var command = new SqlCommand(@"
+                SELECT COUNT(*) FROM SolicitudesPromocion
+                WHERE Cedula = @cedula AND Estado IN ('RevisionDocumental', 'EnComision', 'Apelada')", connection);
             command.Parameters.AddWithValue("@cedula", cedula);
 
             await connection.OpenAsync();
@@ -135,17 +143,75 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             await command.ExecuteNonQueryAsync();
         }
 
-        public async Task<bool> ResolverAsync(int id, string estado, string? observacion, int resueltoPorId)
+        public async Task<bool> EnviarAComisionAsync(int id, int usuarioId, string dictamenJson)
         {
             using var connection = new SqlConnection(_connectionString);
             var command = new SqlCommand(@"
                 UPDATE SolicitudesPromocion
-                SET Estado = @estado, Observacion = @observacion, ResueltoPorId = @resueltoPorId, FechaResolucion = SYSUTCDATETIME()
-                WHERE Id = @id AND Estado = 'Pendiente'", connection);
+                SET Estado = 'EnComision', FechaEnvioComision = SYSUTCDATETIME(), EnviadaComisionPorId = @usuarioId, DictamenJson = @dictamen
+                WHERE Id = @id AND Estado = 'RevisionDocumental'", connection);
             command.Parameters.AddWithValue("@id", id);
-            command.Parameters.AddWithValue("@estado", estado);
+            command.Parameters.AddWithValue("@usuarioId", usuarioId);
+            command.Parameters.AddWithValue("@dictamen", dictamenJson);
+
+            await connection.OpenAsync();
+            return await command.ExecuteNonQueryAsync() == 1;
+        }
+
+        public async Task<bool> ResolverAsync(int id, string estadoEsperado, string nuevoEstado, string numeroResolucion, string? observacion, int resueltoPorId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand(@"
+                UPDATE SolicitudesPromocion
+                SET Estado = @estado, NumeroResolucion = @numero, Observacion = @observacion,
+                    ResueltoPorId = @resueltoPorId, FechaResolucion = SYSUTCDATETIME()
+                WHERE Id = @id AND Estado = @esperado", connection);
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.AddWithValue("@esperado", estadoEsperado);
+            command.Parameters.AddWithValue("@estado", nuevoEstado);
+            command.Parameters.AddWithValue("@numero", numeroResolucion);
             command.Parameters.AddWithValue("@observacion", (object?)observacion ?? DBNull.Value);
             command.Parameters.AddWithValue("@resueltoPorId", resueltoPorId);
+
+            await connection.OpenAsync();
+            return await command.ExecuteNonQueryAsync() == 1;
+        }
+
+        public async Task GuardarActoAsync(int id, byte[] pdf, string hash)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand("UPDATE SolicitudesPromocion SET ActoPdf = @pdf, ActoHash = @hash WHERE Id = @id", connection);
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.Add("@pdf", System.Data.SqlDbType.VarBinary, -1).Value = pdf;
+            command.Parameters.AddWithValue("@hash", hash);
+
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
+        }
+
+        public async Task<byte[]?> ObtenerActoAsync(int id)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand("SELECT ActoPdf FROM SolicitudesPromocion WHERE Id = @id", connection);
+            command.Parameters.AddWithValue("@id", id);
+
+            await connection.OpenAsync();
+            var resultado = await command.ExecuteScalarAsync();
+            return resultado is byte[] pdf ? pdf : null;
+        }
+
+        public async Task<bool> RegistrarAccionPersonalAsync(int id, string numero, DateTime fecha, int usuarioId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand(@"
+                UPDATE SolicitudesPromocion
+                SET Estado = 'Ejecutada', AccionPersonalNumero = @numero, AccionPersonalFecha = @fecha,
+                    EjecutadaPorId = @usuarioId, FechaEjecucion = SYSUTCDATETIME()
+                WHERE Id = @id AND Estado = 'Aprobada'", connection);
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.AddWithValue("@numero", numero);
+            command.Parameters.AddWithValue("@fecha", fecha.Date);
+            command.Parameters.AddWithValue("@usuarioId", usuarioId);
 
             await connection.OpenAsync();
             return await command.ExecuteNonQueryAsync() == 1;
@@ -155,8 +221,14 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         private static DateTime ComoUtc(object valor) =>
             DateTime.SpecifyKind(Convert.ToDateTime(valor), DateTimeKind.Utc);
 
+        private static DateTime? ComoUtcOpcional(object valor) =>
+            valor == DBNull.Value ? null : ComoUtc(valor);
+
         private static SolicitudPromocion LeerSolicitud(SqlDataReader reader)
         {
+            string? Texto(string columna) => reader[columna] == DBNull.Value ? null : reader[columna].ToString();
+            int? Entero(string columna) => reader[columna] == DBNull.Value ? null : Convert.ToInt32(reader[columna]);
+
             return new SolicitudPromocion
             {
                 Id = Convert.ToInt32(reader["Id"]),
@@ -168,10 +240,20 @@ namespace ApiREST_UTA.Infrastructure.Repositories
                 SolicitadoPorId = Convert.ToInt32(reader["SolicitadoPorId"]),
                 SolicitadoPor = reader["SolicitadoPor"].ToString(),
                 FechaSolicitud = ComoUtc(reader["FechaSolicitud"]),
-                ResueltoPorId = reader["ResueltoPorId"] == DBNull.Value ? null : Convert.ToInt32(reader["ResueltoPorId"]),
-                ResueltoPor = reader["ResueltoPorId"] == DBNull.Value ? null : reader["ResueltoPor"].ToString(),
-                FechaResolucion = reader["FechaResolucion"] == DBNull.Value ? null : ComoUtc(reader["FechaResolucion"]),
-                Observacion = reader["Observacion"] == DBNull.Value ? null : reader["Observacion"].ToString()
+                RequisitosPromocionId = Entero("RequisitosPromocionId"),
+                DictamenJson = Texto("DictamenJson"),
+                FechaEnvioComision = ComoUtcOpcional(reader["FechaEnvioComision"]),
+                EnviadaComisionPorId = Entero("EnviadaComisionPorId"),
+                NumeroResolucion = Texto("NumeroResolucion"),
+                ResueltoPorId = Entero("ResueltoPorId"),
+                ResueltoPor = reader["ResueltoPorId"] == DBNull.Value ? null : Texto("ResueltoPor"),
+                FechaResolucion = ComoUtcOpcional(reader["FechaResolucion"]),
+                Observacion = Texto("Observacion"),
+                ActoHash = Texto("ActoHash"),
+                AccionPersonalNumero = Texto("AccionPersonalNumero"),
+                AccionPersonalFecha = reader["AccionPersonalFecha"] == DBNull.Value ? null : Convert.ToDateTime(reader["AccionPersonalFecha"]),
+                EjecutadaPorId = Entero("EjecutadaPorId"),
+                FechaEjecucion = ComoUtcOpcional(reader["FechaEjecucion"])
             };
         }
     }

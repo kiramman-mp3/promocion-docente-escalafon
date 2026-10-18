@@ -1,0 +1,52 @@
+name: Rendimiento
+
+# Prueba de carga con k6 (Reglamento DITIC art. 23 f). Se ejecuta a mano y cada lunes.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  carga:
+    name: Prueba de carga (k6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Crear .env
+        run: |
+          {
+            echo "MSSQL_SA_PASSWORD=Sa$(openssl rand -hex 16)Aa1!"
+            echo "APP_DB_USER=app_uta"
+            echo "APP_DB_PASSWORD=Ap$(openssl rand -hex 16)Bb2!"
+            echo "JWT_KEY=$(openssl rand -hex 48)"
+            echo "SEED_DATA=true"
+          } > .env
+
+      - name: Levantar SQL Server y API
+        run: docker compose up -d --build sqlserver db-init api
+
+      - name: Esperar a la API
+        run: |
+          for i in $(seq 1 90); do
+            curl -sf http://localhost:5270/health > /dev/null && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: k6
+        run: docker run --rm -i --network host -e API_URL=http://localhost:5270 grafana/k6:0.54.0 run --summary-export=resumen-k6.json - < tests/performance/carga.js
+
+      - name: Publicar resumen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendimiento-k6
+          path: resumen-k6.json
+
+      - name: Apagar
+        if: always()
+        run: docker compose down -v

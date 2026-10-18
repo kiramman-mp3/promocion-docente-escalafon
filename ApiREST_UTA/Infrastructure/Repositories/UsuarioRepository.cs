@@ -49,6 +49,17 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             return await reader.ReadAsync() ? LeerUsuario(reader) : null;
         }
 
+        public async Task<Usuario?> ObtenerPorCedulaAsync(string cedula)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand("SELECT TOP 1 * FROM Usuarios WHERE Cedula = @cedula ORDER BY Activo DESC, Id", connection);
+            command.Parameters.AddWithValue("@cedula", cedula);
+
+            await connection.OpenAsync();
+            using var reader = await command.ExecuteReaderAsync();
+            return await reader.ReadAsync() ? LeerUsuario(reader) : null;
+        }
+
         public async Task<int> CrearAsync(Usuario usuario)
         {
             using var connection = new SqlConnection(_connectionString);

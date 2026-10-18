@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, cargarExpediente, iniciarSesion, listarSolicitudes } from "./api";
-import { ROLES } from "./test/fixtures";
+import { dictamenAna } from "./test/fixtures";
 
 type Respuesta = { status: number; cuerpo?: unknown };
 
@@ -25,7 +25,7 @@ const tiempoRol = (rolActual: string) => ({
 });
 
 const contadores = {
-  "/api/importar/tesis-doctorado": { status: 200, cuerpo: { cantidad: 0 } },
+  "/api/importar/trayectoria": { status: 200, cuerpo: { trayectoria: null, cargosAutoridad: [], sabaticos: [] } },
   "/api/importar/obras-idioma": { status: 200, cuerpo: { tieneObraEnOtroIdioma: false } },
   "/api/importar/proyectos-ponderados": { status: 200, cuerpo: { mesesPonderados: 3 } },
   "/api/importar/capacitacion-impartida": { status: 200, cuerpo: { horasImpartidas: 0 } },
@@ -52,11 +52,11 @@ describe("pedidos a la API", () => {
   });
 
   it("filtra solicitudes por estado en la URL", async () => {
-    const llamadas = simularApi({ "/api/solicitudes?estado=Pendiente": { status: 200, cuerpo: [] } });
+    const llamadas = simularApi({ "/api/solicitudes?estado=RevisionDocumental": { status: 200, cuerpo: [] } });
 
-    await listarSolicitudes("token", "Pendiente");
+    await listarSolicitudes("token", "RevisionDocumental");
 
-    expect(llamadas).toEqual(["/api/solicitudes?estado=Pendiente"]);
+    expect(llamadas).toEqual(["/api/solicitudes?estado=RevisionDocumental"]);
   });
 });
 
@@ -64,41 +64,49 @@ describe("cargarExpediente", () => {
   it("trata los 404 de las listas como listas vacías", async () => {
     simularApi({
       "/api/importar/tiempo-rol": tiempoRol("Agregado 1"),
-      "/api/promocion/validar": { status: 200, cuerpo: { rolObjetivo: "Agregado 2", cumpleObras: false } },
+      "/api/promocion/validar": { status: 200, cuerpo: dictamenAna({ cumpleTodo: false }) },
       ...contadores,
     });
 
-    const expediente = await cargarExpediente("1801234567", "token", ROLES);
+    const expediente = await cargarExpediente("1801234567", "token");
 
-    expect(expediente.rolActualId).toBe(3);
     expect(expediente.obras).toEqual([]);
     expect(expediente.evaluaciones).toEqual([]);
+    expect(expediente.proyectos).toEqual([]);
     expect(expediente.mesesPonderados).toBe(3);
-    expect(expediente.resultado?.rolObjetivo).toBe("Agregado 2");
+    expect(expediente.dictamen?.rolObjetivo).toBe("Agregado 2");
+    expect(expediente.errorDictamen).toBeNull();
   });
 
-  it("no pide dictamen para el último rol del escalafón", async () => {
-    const llamadas = simularApi({ "/api/importar/tiempo-rol": tiempoRol("Principal 3"), ...contadores });
+  it("muestra el expediente aunque el dictamen no se pueda calcular", async () => {
+    simularApi({
+      "/api/importar/tiempo-rol": tiempoRol("Agregado 1"),
+      "/api/promocion/validar": { status: 422, cuerpo: { mensaje: "No hay requisitos vigentes para Agregado 1." } },
+      ...contadores,
+    });
 
-    const expediente = await cargarExpediente("1801234567", "token", ROLES);
+    const expediente = await cargarExpediente("1801234567", "token");
 
-    expect(llamadas).not.toContain("/api/promocion/validar");
-    expect(expediente.resultado).toBeNull();
-    expect(expediente.errorResultado).toContain("último rol");
-  });
-
-  it("falla si el rol de RRHH no está en el escalafón", async () => {
-    simularApi({ "/api/importar/tiempo-rol": tiempoRol("Decano") });
-
-    const error = await cargarExpediente("1801234567", "token", ROLES).catch((e) => e);
-
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error.status).toBe(422);
+    expect(expediente.dictamen).toBeNull();
+    expect(expediente.errorDictamen).toBe("No hay requisitos vigentes para Agregado 1.");
   });
 
   it("propaga el 403 cuando un docente pide una cédula ajena", async () => {
     simularApi({ "/api/importar/tiempo-rol": { status: 403, cuerpo: { mensaje: "Solo puedes consultar tu propio expediente." } } });
 
-    await expect(cargarExpediente("1712345678", "token", ROLES)).rejects.toMatchObject({ status: 403 });
+    await expect(cargarExpediente("1712345678", "token")).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("no oculta un 401 del dictamen como error de cálculo", async () => {
+    simularApi({
+      "/api/importar/tiempo-rol": tiempoRol("Agregado 1"),
+      "/api/promocion/validar": { status: 401 },
+      ...contadores,
+    });
+
+    const error = await cargarExpediente("1801234567", "token").catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(401);
   });
 });

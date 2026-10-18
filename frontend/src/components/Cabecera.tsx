@@ -11,7 +11,7 @@ export function Cabecera({ ruta }: { ruta: Ruta }) {
       <div className="cabecera__fila">
         <p className="marca">Promoción docente UTA</p>
         <nav className="navegacion" aria-label="Secciones">
-          {seccionesDe(sesion.rol).map((s) => (
+          {seccionesDe(sesion).map((s) => (
             <a
               key={s.nombre}
               href={enlace(s.ruta)}
@@ -25,7 +25,7 @@ export function Cabecera({ ruta }: { ruta: Ruta }) {
       </div>
       <div className="cabecera__usuario">
         <span>
-          {sesion.nombreCompleto} <span className="cabecera__rol">({sesion.rol})</span>
+          {sesion.nombreCompleto} <span className="cabecera__rol">({sesion.cargoComision && sesion.rol !== "Administrador" ? `${sesion.rol}, Comisión` : sesion.rol})</span>
         </span>
         <button type="button" className="boton-texto" onClick={salir}>
           Cerrar sesión

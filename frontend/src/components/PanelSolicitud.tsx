@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { crearSolicitud, listarSolicitudes } from "../api";
-import { formatoFecha } from "../format";
+import { EN_TRAMITE, formatoFecha, nombreEstado } from "../format";
 import { enlace, navegar } from "../ruta";
 import { useSesion } from "../sesion";
 import type { Expediente, Solicitud } from "../types";
 import { EtiquetaEstado } from "./EtiquetaEstado";
 
-// Debajo del dictamen: muestra la última solicitud del docente o permite crear una nueva.
+// Debajo del dictamen: muestra la última solicitud del docente o permite presentar una nueva (CES art. 99)
 export function PanelSolicitud({ expediente }: { expediente: Expediente }) {
   const { sesion, esRevisor, mensajeDeError } = useSesion();
   const cedula = expediente.tiempo.cedula;
+  const dictamen = expediente.dictamen;
   const [ultima, setUltima] = useState<Solicitud | null | undefined>(undefined);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,43 +38,68 @@ export function PanelSolicitud({ expediente }: { expediente: Expediente }) {
     }
   }
 
-  if (!expediente.resultado || ultima === undefined) return null;
-  const objetivo = expediente.resultado.rolObjetivo;
+  const esPropia = sesion.cedula === cedula;
+  if (!dictamen || ultima === undefined || (!esPropia && !esRevisor)) return null;
+  if (!dictamen.promocionable) return null;
+
+  const objetivo = dictamen.rolObjetivo;
+  const permanencia = dictamen.requisitos.find((r) => r.codigo === "R2");
+  const enTramite = ultima && EN_TRAMITE.includes(ultima.estado);
+  const yaAprobada = ultima && (ultima.estado === "Aprobada" || ultima.estado === "Ejecutada") && ultima.rolObjetivo === objetivo;
+
+  let contenido;
+  if (enTramite) {
+    contenido = (
+      <p>
+        {esPropia ? "Tu solicitud" : "La solicitud"} para {ultima.rolObjetivo} está {nombreEstado(ultima.estado).toLowerCase()} desde el{" "}
+        {formatoFecha(ultima.fechaSolicitud)}. <a href={enlace({ vista: "solicitud", id: ultima.id })}>Ver solicitud</a>
+      </p>
+    );
+  } else if (yaAprobada) {
+    contenido = (
+      <p>
+        La promoción a {objetivo} fue aprobada{ultima.fechaResolucion ? ` el ${formatoFecha(ultima.fechaResolucion)}` : ""}. El expediente
+        mostrará el nuevo rol cuando RRHH lo registre. <a href={enlace({ vista: "solicitud", id: ultima.id })}>Ver solicitud</a>
+      </p>
+    );
+  } else if (permanencia && !permanencia.cumple) {
+    contenido = (
+      <div>
+        <p className="panel-solicitud__titulo">Aún no puede solicitar la promoción a {objetivo}</p>
+        <p className="panel-solicitud__texto">
+          La solicitud se presenta al cumplir la permanencia mínima en el grado (CES art. 99): tiene {permanencia.obtenido} y se exigen{" "}
+          {permanencia.requerido}.
+        </p>
+      </div>
+    );
+  } else {
+    contenido = (
+      <>
+        <div>
+          <p className="panel-solicitud__titulo">
+            {esPropia ? `Solicitar mi promoción a ${objetivo}` : `Registrar la solicitud de promoción a ${objetivo}`}
+          </p>
+          <p className="panel-solicitud__texto">
+            Talento Humano revisará cada documento y la Comisión Académica votará la solicitud.
+            {!dictamen.cumpleTodo && " Puedes presentarla aunque falten requisitos; la Comisión decide con el expediente completo."}
+            {ultima && (
+              <>
+                {" "}
+                La solicitud anterior quedó <EtiquetaEstado estado={ultima.estado} />.
+              </>
+            )}
+          </p>
+        </div>
+        <button type="button" className="boton" onClick={solicitar} disabled={enviando}>
+          {enviando ? "Enviando…" : esPropia ? "Solicitar promoción" : "Registrar solicitud"}
+        </button>
+      </>
+    );
+  }
 
   return (
     <section className="panel-solicitud" aria-label="Solicitud de promoción">
-      {ultima?.estado === "Pendiente" ? (
-        <p>
-          {esRevisor ? "Este docente ya tiene" : "Ya tienes"} una solicitud para {ultima.rolObjetivo} en revisión desde
-          el {formatoFecha(ultima.fechaSolicitud)}. <a href={enlace({ vista: "solicitud", id: ultima.id })}>Ver solicitud</a>
-        </p>
-      ) : ultima?.estado === "Aprobada" && ultima.rolObjetivo === objetivo ? (
-        <p>
-          La promoción a {objetivo} fue aprobada el {ultima.fechaResolucion && formatoFecha(ultima.fechaResolucion)}. El
-          expediente mostrará el nuevo rol cuando RRHH lo registre.{" "}
-          <a href={enlace({ vista: "solicitud", id: ultima.id })}>Ver solicitud</a>
-        </p>
-      ) : (
-        <>
-          <div>
-            <p className="panel-solicitud__titulo">
-              {esRevisor ? `Registrar la solicitud de promoción a ${objetivo}` : `Solicitar mi promoción a ${objetivo}`}
-            </p>
-            <p className="panel-solicitud__texto">
-              RRHH revisará cada documento del expediente antes de aprobarla.
-              {ultima && (
-                <>
-                  {" "}
-                  La solicitud anterior quedó <EtiquetaEstado estado={ultima.estado} />.
-                </>
-              )}
-            </p>
-          </div>
-          <button type="button" className="boton" onClick={solicitar} disabled={enviando}>
-            {enviando ? "Enviando…" : esRevisor ? "Registrar solicitud" : "Solicitar promoción"}
-          </button>
-        </>
-      )}
+      {contenido}
       {error && (
         <p className="alerta" role="alert">
           {error}

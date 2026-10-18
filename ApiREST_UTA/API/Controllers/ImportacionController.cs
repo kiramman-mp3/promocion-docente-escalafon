@@ -2,7 +2,6 @@
 using ApiREST_UTA.Application.DTOs;
 using ApiREST_UTA.Application.Services;
 using ApiREST_UTA.Domain.Interfaces;
-using ApiREST_UTA.Domain.Interfaces.ApiREST_UTA.Domain.Interfaces;
 using ApiREST_UTA.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +22,7 @@ namespace ApiREST_UTA.API.Controllers
         private readonly IObraIdiomaRepository _obraIdiomaRepo;
         private readonly IProyectoPonderadoRepository _proyectoRepo;
         private readonly ICapacitacionImpartidaRepository _capacitacionRepo;
+        private readonly IEquivalenciaRepository _equivalenciaRepo;
 
         public ImportacionController(
                     IRRHHRepository rrhhRepo,
@@ -33,7 +33,8 @@ namespace ApiREST_UTA.API.Controllers
                     ITesisRepository tesisRepo,
                     IObraIdiomaRepository obraIdiomaRepo,
                     IProyectoPonderadoRepository proyectoRepo,
-                    ICapacitacionImpartidaRepository capacitacionRepo)
+                    ICapacitacionImpartidaRepository capacitacionRepo,
+                    IEquivalenciaRepository equivalenciaRepo)
         {
             _rrhhRepo = rrhhRepo;
             _obraRepo = obraRepo;
@@ -44,7 +45,9 @@ namespace ApiREST_UTA.API.Controllers
             _obraIdiomaRepo = obraIdiomaRepo;
             _proyectoRepo = proyectoRepo;
             _capacitacionRepo = capacitacionRepo;
+            _equivalenciaRepo = equivalenciaRepo;
         }
+
         [Authorize]
         [HttpPost("tiempo-rol")]
         public async Task<IActionResult> ImportarTiempoRol([FromBody] TiempoRolRequest request)
@@ -67,13 +70,8 @@ namespace ApiREST_UTA.API.Controllers
             if (string.IsNullOrWhiteSpace(request.Cedula))
                 return BadRequest(new { mensaje = "La cédula es obligatoria" });
 
-            if (request.FechaInicio == default)
-                return BadRequest(new { mensaje = "La fecha de inicio es obligatoria" });
-
+            // Sin FechaInicio devuelve todas las obras (el art. 76 b cuenta toda la producción)
             var obras = await _obraRepo.GetObrasPorCedulaAsync(request.Cedula, request.FechaInicio);
-
-            if (obras == null || !obras.Any())
-                return NotFound(new { mensaje = "No se encontraron obras para la cédula después de la fecha proporcionada." });
 
             return Ok(obras);
         }
@@ -87,9 +85,6 @@ namespace ApiREST_UTA.API.Controllers
 
             var cursos = await _cursoRepo.ObtenerCursosPorCedula(request.Cedula);
 
-            if (cursos == null || !cursos.Any())
-                return NotFound(new { mensaje = "No se encontraron cursos de capacitación para la cédula proporcionada." });
-
             return Ok(cursos);
         }
 
@@ -102,9 +97,6 @@ namespace ApiREST_UTA.API.Controllers
 
             var investigaciones = await _investigacionRepo.ObtenerInvestigacionesPorCedula(request.Cedula);
 
-            if (investigaciones == null || !investigaciones.Any())
-                return NotFound(new { mensaje = "No se encontraron investigaciones para la cédula proporcionada." });
-
             return Ok(investigaciones);
         }
 
@@ -116,9 +108,6 @@ namespace ApiREST_UTA.API.Controllers
                 return BadRequest(new { mensaje = "La cédula es obligatoria" });
 
             var evaluaciones = await _evaluacionRepo.ObtenerEvaluacionesPorCedula(request.Cedula);
-
-            if (evaluaciones == null || !evaluaciones.Any())
-                return NotFound(new { mensaje = "No se encontraron evaluaciones docentes para la cédula proporcionada." });
 
             return Ok(evaluaciones);
         }
@@ -155,6 +144,62 @@ namespace ApiREST_UTA.API.Controllers
             return Ok(new CapacitacionImpartidaResponse { Cedula = req.Cedula, HorasImpartidas = horas });
         }
 
+        [Authorize]
+        [HttpPost("trayectoria")]
+        public async Task<IActionResult> ImportarTrayectoria([FromBody] TiempoRolRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Cedula))
+                return BadRequest(new { mensaje = "La cédula es obligatoria" });
 
+            return Ok(new
+            {
+                trayectoria = await _rrhhRepo.ObtenerTrayectoriaAsync(request.Cedula),
+                cargosAutoridad = await _rrhhRepo.ObtenerCargosAutoridadAsync(request.Cedula),
+                sabaticos = await _rrhhRepo.ObtenerSabaticosAsync(request.Cedula)
+            });
+        }
+
+        [Authorize]
+        [HttpPost("proyectos")]
+        public async Task<IActionResult> ImportarProyectos([FromBody] ProyectoPonderadoRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Cedula))
+                return BadRequest(new { mensaje = "La cédula es obligatoria" });
+
+            var proyectos = await _proyectoRepo.ObtenerProyectosAsync(req.Cedula);
+            return Ok(proyectos.Select(p => new
+            {
+                p.Id,
+                p.Cedula,
+                p.NombreProyecto,
+                p.Rol,
+                p.TipoProyecto,
+                p.Meses,
+                p.MesesPonderados,
+                p.FechaInicio,
+                p.FechaFin
+            }));
+        }
+
+        [Authorize]
+        [HttpPost("trabajos-titulacion")]
+        public async Task<IActionResult> ImportarTrabajosTitulacion([FromBody] TesisDoctoradoRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Cedula))
+                return BadRequest(new { mensaje = "La cédula es obligatoria" });
+
+            return Ok(await _tesisRepo.ObtenerTrabajosTitulacionAsync(req.Cedula));
+        }
+
+        [Authorize]
+        [HttpPost("equivalencias")]
+        public async Task<IActionResult> ImportarEquivalencias([FromBody] CapacitacionImpartidaRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Cedula))
+                return BadRequest(new { mensaje = "La cédula es obligatoria" });
+
+            var equivalencias = await _equivalenciaRepo.ObtenerEquivalenciasAsync(req.Cedula);
+            return Ok(equivalencias.Select(e => new { e.Id, e.Cedula, e.Tipo, e.Fecha, e.Meses, e.Descripcion, e.HorasCapacitacion }));
+        }
     }
 }

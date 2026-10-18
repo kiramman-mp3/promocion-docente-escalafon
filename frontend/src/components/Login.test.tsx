@@ -17,6 +17,9 @@ const sesionRrhh = {
   correo: "rrhh@uta.edu.ec",
   rol: "RRHH" as const,
   cedula: null,
+  esMiembroComision: true,
+  esPresidenteComision: false,
+  cargoComision: "DirectorTalentoHumano",
 };
 
 async function ingresar(correo: string, contrasena: string) {

@@ -1,0 +1,62 @@
+using ApiREST_UTA.Application.DTOs;
+using ApiREST_UTA.Application.Services;
+using ApiREST_UTA.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ApiREST_UTA.API.Controllers
+{
+    [ApiController]
+    [Route("api/solicitudes/{solicitudId:int}/evidencias")]
+    [Authorize]
+    public class EvidenciasController : ControllerBase
+    {
+        private readonly EvidenciaService _service;
+
+        public EvidenciasController(EvidenciaService service)
+        {
+            _service = service;
+        }
+
+        [HttpGet]
+        public Task<IActionResult> Listar(int solicitudId) =>
+            Ejecutar(async () => Ok(await _service.ListarAsync(solicitudId, User)));
+
+        // Un modelo [FromForm] (y no parámetros sueltos) para que Swagger pueda describir la subida del archivo
+        [HttpPost]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(EvidenciaSolicitud.TamanoMaximo + 1024 * 1024)]
+        public Task<IActionResult> Subir(int solicitudId, [FromForm] SubirEvidenciaRequest request) =>
+            Ejecutar(async () =>
+            {
+                if (request.Archivo == null)
+                    return BadRequest(new { mensaje = "Adjunta el archivo PDF." });
+
+                using var memoria = new MemoryStream();
+                await request.Archivo.CopyToAsync(memoria);
+                var evidencia = await _service.SubirAsync(
+                    solicitudId, request.Tipo ?? "", request.Descripcion ?? "", request.Archivo.FileName, memoria.ToArray(), User);
+                return StatusCode(StatusCodes.Status201Created, evidencia);
+            });
+
+        [HttpGet("{evidenciaId:int}")]
+        public Task<IActionResult> Descargar(int solicitudId, int evidenciaId) =>
+            Ejecutar(async () =>
+            {
+                var evidencia = await _service.DescargarAsync(solicitudId, evidenciaId, User);
+                return File(evidencia.Contenido!, "application/pdf", evidencia.NombreArchivo);
+            });
+
+        private async Task<IActionResult> Ejecutar(Func<Task<IActionResult>> accion)
+        {
+            try
+            {
+                return await accion();
+            }
+            catch (ReglaNegocioException ex)
+            {
+                return StatusCode(ex.StatusCode, new { mensaje = ex.Message });
+            }
+        }
+    }
+}

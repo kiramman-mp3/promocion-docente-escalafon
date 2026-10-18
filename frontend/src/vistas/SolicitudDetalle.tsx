@@ -1,57 +1,65 @@
-import { useEffect, useId, useState } from "react";
-import { obtenerSolicitud, resolverSolicitud, revisarDocumento } from "../api";
+import { useCallback, useEffect, useState } from "react";
+import { obtenerSolicitud } from "../api";
 import { Dictamen } from "../components/Dictamen";
 import { Escalafon } from "../components/Escalafon";
 import { EtiquetaEstado } from "../components/EtiquetaEstado";
-import { Evidencia, type ModoRevision } from "../components/Evidencia";
-import { formatoFecha, plural } from "../format";
+import { Evidencia } from "../components/Evidencia";
+import { Evidencias } from "../components/solicitud/Evidencias";
+import { Resolucion } from "../components/solicitud/Resolucion";
+import { RevisionDocumental } from "../components/solicitud/RevisionDocumental";
+import { Votacion } from "../components/solicitud/Votacion";
+import { formatoFecha } from "../format";
 import { enlace } from "../ruta";
 import { useSesion } from "../sesion";
-import type { Expediente, Solicitud } from "../types";
+import type { Solicitud } from "../types";
 import { cumpleTodo, useExpediente } from "../useExpediente";
 
+function titulo(s: Solicitud, esDocente: boolean) {
+  switch (s.estado) {
+    case "RevisionDocumental":
+      return esDocente ? `Tu solicitud para ${s.rolObjetivo} está en revisión documental` : `Revisa los documentos para ${s.rolObjetivo}`;
+    case "EnComision":
+      return `La Comisión Académica vota la promoción a ${s.rolObjetivo}`;
+    case "Aprobada":
+      return `Promoción a ${s.rolObjetivo} aprobada`;
+    case "Rechazada":
+      return `Promoción a ${s.rolObjetivo} negada`;
+    case "Apelada":
+      return `Apelación en trámite ante el Consejo Universitario`;
+    case "Ejecutada":
+      return `Promoción a ${s.rolObjetivo} ejecutada`;
+  }
+}
+
 export function SolicitudDetalle({ id }: { id: number }) {
-  const { sesion, roles, esRevisor, mensajeDeError } = useSesion();
+  const { sesion, roles, mensajeDeError } = useSesion();
   const [solicitud, setSolicitud] = useState<Solicitud | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { expediente, cargando, error: errorExpediente } = useExpediente(solicitud?.cedula ?? null);
+  const { expediente } = useExpediente(solicitud?.cedula ?? null);
 
-  useEffect(() => {
-    let vigente = true;
-    setSolicitud(null);
-    setError(null);
+  const cargar = useCallback(() => {
     obtenerSolicitud(id, sesion.token)
-      .then((s) => vigente && setSolicitud(s))
-      .catch((e) => vigente && setError(mensajeDeError(e)));
-    return () => {
-      vigente = false;
-    };
+      .then(setSolicitud)
+      .catch((e) => setError(mensajeDeError(e)));
   }, [id, sesion.token, mensajeDeError]);
 
-  const pendiente = solicitud?.estado === "Pendiente";
-  const modoRevision: ModoRevision | undefined = solicitud
-    ? {
-        revisiones: solicitud.revisiones ?? [],
-        editable: esRevisor && pendiente,
-        onRevisar: async (tipoDocumento, documentoId, estado, observacion) => {
-          try {
-            setSolicitud(await revisarDocumento(id, { tipoDocumento, documentoId, estado, observacion }, sesion.token));
-          } catch (e) {
-            throw new Error(mensajeDeError(e));
-          }
-        },
-      }
-    : undefined;
+  useEffect(() => {
+    setSolicitud(null);
+    setError(null);
+    cargar();
+  }, [cargar]);
+
+  const esDocente = sesion.cedula === solicitud?.cedula;
 
   return (
     <div className="tablero">
       <aside className="tablero__escalera">
-        <Escalafon roles={roles} rolActualId={expediente?.rolActualId} alcanzaObjetivo={cumpleTodo(expediente)} />
+        <Escalafon roles={roles} rolActualId={solicitud?.rolActualId} alcanzaObjetivo={cumpleTodo(solicitud?.dictamen) || solicitud?.estado === "Aprobada"} />
       </aside>
 
       <main className="tablero__contenido">
         <p className="migas">
-          <a href={enlace({ vista: "solicitudes" })}>{esRevisor ? "Solicitudes" : "Mis solicitudes"}</a>
+          <a href={enlace({ vista: "solicitudes" })}>Solicitudes</a>
         </p>
 
         {error && (
@@ -63,145 +71,37 @@ export function SolicitudDetalle({ id }: { id: number }) {
 
         {solicitud && (
           <div className="resultado">
-            <EncabezadoSolicitud solicitud={solicitud} esRevisor={esRevisor} />
-
-            {errorExpediente && (
-              <p className="alerta" role="alert">
-                {errorExpediente}
+            <section className="encabezado-solicitud" aria-labelledby="solicitud-titulo">
+              <p className="dictamen__contexto">
+                Solicitud {solicitud.id} de la cédula {solicitud.cedula}, presentada por {solicitud.solicitadoPor} el{" "}
+                {formatoFecha(solicitud.fechaSolicitud)} <EtiquetaEstado estado={solicitud.estado} />
               </p>
-            )}
-            {cargando && !expediente && <p className="cargando">Cargando expediente…</p>}
+              <h1 id="solicitud-titulo" className={`dictamen__veredicto encabezado-solicitud__titulo--${solicitud.estado.toLowerCase()}`}>
+                {titulo(solicitud, esDocente)}
+              </h1>
+              <ol className="linea-tiempo" aria-label="Avance del trámite">
+                <li className="hecho">Presentada {formatoFecha(solicitud.fechaSolicitud)}</li>
+                <li className={solicitud.fechaEnvioComision ? "hecho" : "actual"}>
+                  Revisión documental{solicitud.fechaEnvioComision ? `, enviada a la Comisión el ${formatoFecha(solicitud.fechaEnvioComision)}` : ""}
+                </li>
+                <li className={solicitud.fechaResolucion ? "hecho" : solicitud.estado === "EnComision" ? "actual" : ""}>
+                  Votación de la Comisión{solicitud.fechaResolucion ? `, resuelta el ${formatoFecha(solicitud.fechaResolucion)}` : ""}
+                </li>
+                <li className={solicitud.estado === "Ejecutada" ? "hecho" : solicitud.estado === "Aprobada" ? "actual" : ""}>
+                  Acción de personal{solicitud.accionPersonalNumero ? ` ${solicitud.accionPersonalNumero}` : ""}
+                </li>
+              </ol>
+            </section>
 
-            {expediente && (
-              <>
-                <Dictamen expediente={expediente} />
-                <Evidencia expediente={expediente} modoRevision={modoRevision} />
-                {esRevisor && pendiente && (
-                  <Resolucion solicitud={solicitud} expediente={expediente} onResuelta={setSolicitud} />
-                )}
-              </>
-            )}
+            <Resolucion solicitud={solicitud} onCambio={setSolicitud} />
+            {solicitud.votacion && <Votacion solicitud={solicitud} onCambio={setSolicitud} />}
+            <Dictamen dictamen={solicitud.dictamen} secundario />
+            <Evidencias solicitud={solicitud} onCambio={cargar} />
+            {solicitud.documentos && <RevisionDocumental solicitud={solicitud} onCambio={setSolicitud} />}
+            {expediente && <Evidencia expediente={expediente} />}
           </div>
         )}
       </main>
     </div>
-  );
-}
-
-function EncabezadoSolicitud({ solicitud: s, esRevisor }: { solicitud: Solicitud; esRevisor: boolean }) {
-  const titulo =
-    s.estado === "Aprobada"
-      ? `Promoción a ${s.rolObjetivo} aprobada`
-      : s.estado === "Rechazada"
-        ? `Solicitud para ${s.rolObjetivo} rechazada`
-        : esRevisor
-          ? `Revisa la solicitud para ${s.rolObjetivo}`
-          : `Tu solicitud para ${s.rolObjetivo} está en revisión`;
-
-  return (
-    <section className="encabezado-solicitud" aria-labelledby="solicitud-titulo">
-      <p className="dictamen__contexto">
-        Solicitud {s.id} de la cédula {s.cedula}, registrada por {s.solicitadoPor} el {formatoFecha(s.fechaSolicitud)}{" "}
-        <EtiquetaEstado estado={s.estado} />
-      </p>
-      <h1 id="solicitud-titulo" className={`dictamen__veredicto encabezado-solicitud__titulo--${s.estado.toLowerCase()}`}>
-        {titulo}
-      </h1>
-      {s.estado !== "Pendiente" && (
-        <div className={`resolucion-final resolucion-final--${s.estado.toLowerCase()}`}>
-          <p>
-            Resuelta por {s.resueltoPor} el {s.fechaResolucion && formatoFecha(s.fechaResolucion)}.
-          </p>
-          {s.observacion && <p className="resolucion-final__observacion">{s.observacion}</p>}
-        </div>
-      )}
-      {s.estado === "Pendiente" && !esRevisor && (
-        <p className="encabezado-solicitud__nota">
-          RRHH está revisando tus documentos. Aquí verás qué aprobaron y, si rechazan alguno, el motivo.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function Resolucion({
-  solicitud,
-  expediente: e,
-  onResuelta,
-}: {
-  solicitud: Solicitud;
-  expediente: Expediente;
-  onResuelta: (s: Solicitud) => void;
-}) {
-  const { sesion, mensajeDeError } = useSesion();
-  const idObservacion = useId();
-  const [observacion, setObservacion] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const total = e.obras.length + e.evaluaciones.length + e.cursos.length + e.investigaciones.length + 1;
-  const revisiones = solicitud.revisiones ?? [];
-  const rechazados = revisiones.filter((r) => r.estado === "Rechazado").length;
-  const faltan = Math.max(total - revisiones.length, 0);
-
-  async function resolver(estado: "Aprobada" | "Rechazada") {
-    if (estado === "Rechazada" && !observacion.trim()) {
-      setError("Escribe el motivo del rechazo para que el docente sepa qué corregir.");
-      return;
-    }
-    setEnviando(true);
-    setError(null);
-    try {
-      onResuelta(await resolverSolicitud(solicitud.id, estado, observacion.trim(), sesion.token));
-      window.scrollTo({ top: 0 });
-    } catch (err) {
-      setError(mensajeDeError(err));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <section className="resolucion" aria-labelledby="resolucion-titulo">
-      <h2 id="resolucion-titulo" className="evidencia__titulo">
-        Resolución
-      </h2>
-      <p className="resolucion__progreso">
-        {faltan === 0 ? "Revisaste todos los documentos" : `Faltan ${plural(faltan, "documento")} por revisar`}
-        {rechazados > 0 && `, ${rechazados === 1 ? "1 está rechazado" : `${rechazados} están rechazados`}`}.
-        {rechazados > 0 && " Para aprobar la promoción no puede quedar ningún documento rechazado."}
-      </p>
-
-      <label className="campo" htmlFor={idObservacion}>
-        <span className="campo__etiqueta">Observación para el docente (obligatoria si rechazas)</span>
-        <textarea
-          id={idObservacion}
-          rows={3}
-          maxLength={1000}
-          value={observacion}
-          onChange={(ev) => setObservacion(ev.target.value)}
-        />
-      </label>
-
-      {error && (
-        <p className="alerta" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="resolucion__acciones">
-        <button
-          type="button"
-          className="boton boton--aprobar"
-          disabled={enviando || rechazados > 0}
-          onClick={() => resolver("Aprobada")}
-        >
-          Aprobar promoción a {solicitud.rolObjetivo}
-        </button>
-        <button type="button" className="boton boton--secundario" disabled={enviando} onClick={() => resolver("Rechazada")}>
-          Rechazar solicitud
-        </button>
-      </div>
-    </section>
   );
 }

@@ -54,6 +54,7 @@ services:
       JWT_KEY: ${JWT_KEY:?Define JWT_KEY en .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10}
     ports:
       - "${API_PORT:-5270}:8080"
     restart: unless-stopped
@@ -70,6 +71,40 @@ services:
     ports:
       - "${FRONTEND_PORT:-8080}:8080"
     restart: unless-stopped
+
+  # Operación (perfil "operacion", no se levantan con docker compose up):
+  #   docker compose --profile operacion run --rm db-backup
+  #   docker compose --profile operacion run --rm -e BASE=DITIC db-restore
+  # Los respaldos quedan en /var/opt/mssql/backup dentro del volumen de SQL Server.
+  db-backup:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["operacion"]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker/backup-db.sh"]
+    environment:
+      DB_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      RETENCION_DIAS: ${RETENCION_DIAS:-30}
+    volumes:
+      - ./docker/backup-db.sh:/docker/backup-db.sh:ro
+    restart: "no"
+
+  db-restore:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["operacion"]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker/restore-db.sh"]
+    environment:
+      DB_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER}
+    volumes:
+      - ./docker/restore-db.sh:/docker/restore-db.sh:ro
+    restart: "no"
 
 volumes:
   sqlserver-data:
