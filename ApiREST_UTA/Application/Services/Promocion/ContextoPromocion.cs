@@ -10,6 +10,7 @@ namespace ApiREST_UTA.Application.Services.Promocion
         public List<Rol> Roles { get; set; } = new();
         public Rol RolActual { get; set; } = null!;
         public Rol? RolObjetivo { get; set; }
+        public int TiempoRolId { get; set; }
         public DateTime FechaInicioGrado { get; set; }
         public RequisitoPromocion? Requisitos { get; set; }
         public TrayectoriaDocente? Trayectoria { get; set; }

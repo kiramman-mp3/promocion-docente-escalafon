@@ -12,22 +12,26 @@ namespace ApiREST_UTA.Application.Services
     public class AuthService
     {
         private readonly IUsuarioRepository _repo;
+        private readonly IComisionRepository _comision;
         private readonly string _jwtKey;
 
-        public AuthService(IUsuarioRepository repo, string jwtKey)
+        public AuthService(IUsuarioRepository repo, IComisionRepository comision, string jwtKey)
         {
             _repo = repo;
+            _comision = comision;
             _jwtKey = jwtKey;
         }
 
-        public LoginResponse? Autenticar(LoginRequest request)
+        public async Task<LoginResponse?> AutenticarAsync(LoginRequest request)
         {
             var usuario = _repo.GetByCorreo(request.Correo);
 
             if (usuario == null || !usuario.Activo || !BCrypt.Net.BCrypt.Verify(request.Contrasena, usuario.Contrasena))
                 return null;
 
-            var token = GenerarToken(usuario);
+            // La pertenencia a la Comisión Académica viaja en el token (UTA art. 47)
+            var miembro = await _comision.ObtenerMiembroActivoPorUsuarioAsync(usuario.Id);
+            var token = GenerarToken(usuario, miembro != null);
             return new LoginResponse
             {
                 Token = token,
@@ -39,7 +43,7 @@ namespace ApiREST_UTA.Application.Services
             };
         }
 
-        private string GenerarToken(Usuario usuario)
+        private string GenerarToken(Usuario usuario, bool miembroComision)
         {
             var claims = new List<Claim>
             {
@@ -49,6 +53,8 @@ namespace ApiREST_UTA.Application.Services
             };
             if (!string.IsNullOrWhiteSpace(usuario.Cedula))
                 claims.Add(new Claim(ClaimsUsuario.Cedula, usuario.Cedula));
+            if (miembroComision)
+                claims.Add(new Claim(ClaimsUsuario.Comision, "true"));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

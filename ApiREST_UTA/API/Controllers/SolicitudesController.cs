@@ -19,7 +19,7 @@ namespace ApiREST_UTA.API.Controllers
             _service = service;
         }
 
-        // Docente: solicita su propia promoción. RRHH/Administrador: pueden registrarla para cualquier docente.
+        // Docente: solicita su propia promoción (CES art. 99). Talento Humano/Administrador: pueden registrarla para cualquier docente.
         [HttpPost]
         [SoloCedulaPropia]
         public Task<IActionResult> Crear([FromBody] CrearSolicitudRequest request) =>
@@ -29,7 +29,7 @@ namespace ApiREST_UTA.API.Controllers
                 return CreatedAtAction(nameof(Obtener), new { id = solicitud.Id }, solicitud);
             });
 
-        // Docente: sus solicitudes. RRHH/Administrador: todas (filtro opcional ?estado=Pendiente)
+        // Docente: sus solicitudes. Comisión: además las enviadas a ella. Talento Humano/Administrador: todas.
         [HttpGet]
         public async Task<IActionResult> Listar([FromQuery] string? estado)
         {
@@ -44,15 +44,25 @@ namespace ApiREST_UTA.API.Controllers
                 return solicitud == null ? NotFound(new { mensaje = "La solicitud no existe." }) : Ok(solicitud);
             });
 
+        // Revisión documental por Talento Humano
         [HttpPut("{id:int}/documentos")]
         [Authorize(Roles = RolesSistema.Revisores)]
         public Task<IActionResult> RevisarDocumento(int id, [FromBody] RevisarDocumentoRequest request) =>
             Ejecutar(async () => Ok(await _service.RevisarDocumentoAsync(id, request, User)));
 
-        [HttpPut("{id:int}/resolucion")]
+        [HttpPost("{id:int}/enviar-comision")]
         [Authorize(Roles = RolesSistema.Revisores)]
-        public Task<IActionResult> Resolver(int id, [FromBody] ResolverSolicitudRequest request) =>
-            Ejecutar(async () => Ok(await _service.ResolverAsync(id, request, User)));
+        public Task<IActionResult> EnviarAComision(int id) =>
+            Ejecutar(async () => Ok(await _service.EnviarAComisionAsync(id, User)));
+
+        // Votación de la Comisión Académica (UTA art. 47). La pertenencia se valida en el servicio.
+        [HttpPut("{id:int}/votos")]
+        public Task<IActionResult> Votar(int id, [FromBody] VotoRequest request) =>
+            Ejecutar(async () => Ok(await _service.VotarAsync(id, request, User)));
+
+        [HttpPost("{id:int}/cerrar-votacion")]
+        public Task<IActionResult> CerrarVotacion(int id, [FromBody] CerrarVotacionRequest request) =>
+            Ejecutar(async () => Ok(await _service.CerrarVotacionAsync(id, request, User)));
 
         private async Task<IActionResult> Ejecutar(Func<Task<IActionResult>> accion)
         {

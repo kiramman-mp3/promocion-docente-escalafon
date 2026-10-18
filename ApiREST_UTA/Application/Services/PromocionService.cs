@@ -68,6 +68,7 @@ namespace ApiREST_UTA.Application.Services
                 Roles = roles,
                 RolActual = rolActual,
                 RolObjetivo = rolActual.Promocionable ? roles.FirstOrDefault(r => r.Id == rolActual.Id + 1) : null,
+                TiempoRolId = tiempo.Id,
                 FechaInicioGrado = tiempo.FechaInicio.Date,
                 Requisitos = requisitos,
                 Trayectoria = await _rrhhRepo.ObtenerTrayectoriaAsync(cedula),
