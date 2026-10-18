@@ -13,7 +13,7 @@ export function MiExpediente() {
   return (
     <div className="tablero">
       <aside className="tablero__escalera">
-        <Escalafon roles={roles} rolActualId={expediente?.rolActualId} alcanzaObjetivo={cumpleTodo(expediente)} />
+        <Escalafon roles={roles} rolActualId={expediente?.dictamen?.rolActualId} alcanzaObjetivo={cumpleTodo(expediente?.dictamen)} />
       </aside>
 
       <main className="tablero__contenido" aria-busy={cargando}>
@@ -30,7 +30,7 @@ export function MiExpediente() {
         )}
         {expediente && (
           <div className="resultado">
-            <Dictamen expediente={expediente} />
+            <Dictamen dictamen={expediente.dictamen} error={expediente.errorDictamen} />
             <PanelSolicitud expediente={expediente} />
             <Evidencia expediente={expediente} />
           </div>

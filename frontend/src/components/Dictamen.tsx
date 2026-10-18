@@ -1,40 +1,66 @@
 import { formatoFecha } from "../format";
-import { requisitosDe } from "../requisitos";
-import type { Expediente } from "../types";
+import type { Dictamen as DatosDictamen } from "../types";
 
-export function Dictamen({ expediente }: { expediente: Expediente }) {
-  const { tiempo, resultado, errorResultado } = expediente;
+interface Props {
+  dictamen: DatosDictamen | null;
+  error?: string | null;
+  // Dentro de una solicitud el veredicto es un apoyo, no el titular de la página
+  secundario?: boolean;
+}
 
-  if (!resultado) {
+function titulo(d: DatosDictamen) {
+  if (!d.promocionable) {
+    return d.rolActualId === 5
+      ? "Agregado 3 no tiene promoción: Principal 1 se obtiene por concurso"
+      : `${d.rolActual} es el último grado del escalafón`;
+  }
+  if (d.requisitosId == null) return `Aún no hay requisitos vigentes para ascender a ${d.rolObjetivo}`;
+  const faltan = d.requisitos.filter((r) => !r.cumple).length;
+  return faltan === 0
+    ? `Cumple todos los requisitos para ${d.rolObjetivo}`
+    : `Le ${faltan === 1 ? "falta 1 requisito" : `faltan ${faltan} requisitos`} para ${d.rolObjetivo}`;
+}
+
+export function Dictamen({ dictamen, error, secundario = false }: Props) {
+  if (!dictamen) {
     return (
       <section className="dictamen" aria-labelledby="dictamen-titulo">
         <h2 id="dictamen-titulo" className="dictamen__veredicto">
-          {errorResultado}
+          {error ?? "No se pudo calcular el dictamen."}
         </h2>
-        <p className="dictamen__contexto">
-          Cédula {tiempo.cedula}, {tiempo.rolActual} desde el {formatoFecha(tiempo.fechaInicio)}.
-        </p>
       </section>
     );
   }
 
-  const requisitos = requisitosDe(expediente);
-  const faltantes = requisitos.filter((x) => !x.cumple).length;
+  const cumple = dictamen.promocionable && dictamen.cumpleTodo;
+  // R1 (grado con promoción) solo se muestra cuando bloquea
+  const requisitos = dictamen.requisitos.filter((r) => r.codigo !== "R1" || !r.cumple);
 
   return (
-    <section className="dictamen" aria-labelledby="dictamen-titulo">
+    <section className={`dictamen ${secundario ? "dictamen--secundario" : ""}`} aria-labelledby="dictamen-titulo">
       <p className="dictamen__contexto">
-        Cédula {tiempo.cedula}, de {tiempo.rolActual} a {resultado.rolObjetivo}
+        Cédula {dictamen.cedula}, {dictamen.rolActual}
+        {dictamen.rolObjetivo ? ` a ${dictamen.rolObjetivo}` : ""}. Evaluado al {formatoFecha(dictamen.fechaCorte)}.
       </p>
-      <h2 id="dictamen-titulo" className={`dictamen__veredicto ${faltantes ? "" : "dictamen__veredicto--cumple"}`}>
-        {faltantes
-          ? `Le ${faltantes === 1 ? "falta 1 requisito" : `faltan ${faltantes} requisitos`} para ${resultado.rolObjetivo}`
-          : `Cumple todos los requisitos para ${resultado.rolObjetivo}`}
+      <h2 id="dictamen-titulo" className={`dictamen__veredicto ${cumple ? "dictamen__veredicto--cumple" : ""}`}>
+        {titulo(dictamen)}
       </h2>
+
+      {dictamen.requisitosPropuestos && (
+        <p className="aviso-norma">
+          Requisitos propuestos mientras la UTA expide su normativa interna de promoción (transitoria cuarta, 0153-HCU-2026).
+        </p>
+      )}
+
+      {dictamen.alertas.map((a) => (
+        <p key={a} className="alerta">
+          {a}
+        </p>
+      ))}
 
       <ul className="requisitos">
         {requisitos.map((req) => (
-          <li key={req.nombre} className={`requisito ${req.cumple ? "requisito--cumple" : "requisito--falta"}`}>
+          <li key={req.codigo} className={`requisito ${req.cumple ? "requisito--cumple" : "requisito--falta"}`}>
             <span className="requisito__marca" aria-hidden="true">
               {req.cumple ? (
                 <svg viewBox="0 0 20 20"><path d="M5 10.5l3.2 3.2L15 7" /></svg>
@@ -42,12 +68,25 @@ export function Dictamen({ expediente }: { expediente: Expediente }) {
                 <svg viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" /></svg>
               )}
             </span>
-            <span className="requisito__nombre">{req.nombre}</span>
-            <span className="requisito__detalle">{req.detalle}</span>
-            <span className="requisito__estado">{req.cumple ? "Cumple" : "No cumple"}</span>
+            <span className="requisito__nombre">
+              {req.nombre}
+              <span className="requisito__articulo">{req.articulo}</span>
+            </span>
+            <span className="requisito__detalle">
+              <span className="requisito__valores">
+                {req.obtenido}
+                <span className="requisito__requerido">Se exige: {req.requerido}</span>
+              </span>
+              {req.detalle && <span className="requisito__nota">{req.detalle}</span>}
+            </span>
+            <span className="requisito__estado">
+              {req.cumple ? (req.exento ? "Cumple con excepción" : "Cumple") : "No cumple"}
+            </span>
           </li>
         ))}
       </ul>
+
+      {dictamen.normativa && <p className="dictamen__norma">Base legal: {dictamen.normativa}.</p>}
     </section>
   );
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, cargarExpediente } from "./api";
 import { useSesion } from "./sesion";
-import type { Expediente } from "./types";
+import type { Dictamen, Expediente } from "./types";
 
 // Carga el expediente de una cédula; con cedula = null no hace nada.
 export function useExpediente(cedula: string | null) {
-  const { sesion, roles, mensajeDeError } = useSesion();
+  const { sesion, mensajeDeError } = useSesion();
   const [expediente, setExpediente] = useState<Expediente | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +15,7 @@ export function useExpediente(cedula: string | null) {
       setCargando(true);
       setError(null);
       try {
-        setExpediente(await cargarExpediente(c, sesion.token, roles));
+        setExpediente(await cargarExpediente(c, sesion.token));
       } catch (e) {
         setExpediente(null);
         setError(
@@ -27,19 +27,16 @@ export function useExpediente(cedula: string | null) {
         setCargando(false);
       }
     },
-    [sesion.token, roles, mensajeDeError],
+    [sesion.token, mensajeDeError],
   );
 
   useEffect(() => {
-    if (cedula && roles.length) cargar(cedula);
-  }, [cedula, roles.length, cargar]);
+    if (cedula) cargar(cedula);
+  }, [cedula, cargar]);
 
-  return { expediente, cargando, error };
+  return { expediente, cargando, error, recargar: () => cedula && cargar(cedula) };
 }
 
-export function cumpleTodo(expediente: Expediente | null) {
-  return (
-    !!expediente?.resultado &&
-    Object.entries(expediente.resultado).every(([k, v]) => !k.startsWith("cumple") || v === true)
-  );
+export function cumpleTodo(dictamen: Dictamen | null | undefined) {
+  return !!dictamen?.promocionable && dictamen.cumpleTodo;
 }

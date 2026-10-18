@@ -13,6 +13,9 @@ const USUARIOS_DE_PRUEBA = [
   { correo: "ana.perez@uta.edu.ec", rol: "Docente" },
   { correo: "rrhh@uta.edu.ec", rol: "RRHH" },
   { correo: "admin@uta.edu.ec", rol: "Administrador" },
+  { correo: "vicerrectorado@uta.edu.ec", rol: "Autoridad, preside la Comisión" },
+  { correo: "financiero@uta.edu.ec", rol: "Autoridad, Director Financiero" },
+  { correo: "lucia.mora@uta.edu.ec", rol: "Docente y miembro de la Comisión" },
 ];
 
 export function Login({ roles, errorRoles, onSesion }: Props) {
