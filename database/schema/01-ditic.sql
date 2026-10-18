@@ -225,3 +225,24 @@ IF COL_LENGTH('dbo.SolicitudesPromocion', 'ActoPdf') IS NULL
         EjecutadaPorId       INT NULL CONSTRAINT FK_SolicitudesPromocion_EjecutadaPor REFERENCES dbo.Usuarios (Id),
         FechaEjecucion       DATETIME2 NULL;
 GO
+
+-- Recurso de apelación contra la resolución de la Comisión (Código Orgánico Administrativo, arts. 217-218 y 224).
+-- Lo resuelve el Honorable Consejo Universitario; el sistema registra su resolución.
+IF OBJECT_ID('dbo.Apelaciones', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Apelaciones (
+        Id                INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Apelaciones PRIMARY KEY,
+        SolicitudId       INT NOT NULL CONSTRAINT FK_Apelaciones_Solicitud REFERENCES dbo.SolicitudesPromocion (Id)
+            CONSTRAINT UQ_Apelaciones_Solicitud UNIQUE,
+        Fundamentos       NVARCHAR(2000) NOT NULL,
+        FechaPresentacion DATETIME2 NOT NULL CONSTRAINT DF_Apelaciones_Fecha DEFAULT SYSUTCDATETIME(),
+        PresentadaPorId   INT NOT NULL CONSTRAINT FK_Apelaciones_PresentadaPor REFERENCES dbo.Usuarios (Id),
+        Estado            NVARCHAR(15) NOT NULL CONSTRAINT DF_Apelaciones_Estado DEFAULT N'Pendiente'
+            CONSTRAINT CK_Apelaciones_Estado CHECK (Estado IN (N'Pendiente', N'Aceptada', N'Negada')),
+        ResolucionHCU     NVARCHAR(50) NULL,
+        Motivacion        NVARCHAR(2000) NULL,
+        ResueltaPorId     INT NULL CONSTRAINT FK_Apelaciones_ResueltaPor REFERENCES dbo.Usuarios (Id),
+        FechaResolucion   DATETIME2 NULL
+    );
+END
+GO
