@@ -114,3 +114,33 @@ GO
 IF COL_LENGTH('dbo.SolicitudesPromocion', 'DictamenJson') IS NULL
     ALTER TABLE dbo.SolicitudesPromocion ADD DictamenJson NVARCHAR(MAX) NULL;
 GO
+
+-- Evidencias que anexa el docente a su solicitud (CES art. 99): certificados que no están en las bases institucionales
+IF OBJECT_ID('dbo.EvidenciasSolicitud', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.EvidenciasSolicitud (
+        Id            INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_EvidenciasSolicitud PRIMARY KEY,
+        SolicitudId   INT NOT NULL CONSTRAINT FK_EvidenciasSolicitud_Solicitud REFERENCES dbo.SolicitudesPromocion (Id),
+        Tipo          NVARCHAR(30) NOT NULL
+            CONSTRAINT CK_EvidenciasSolicitud_Tipo CHECK (Tipo IN (N'CertificadoCongreso', N'Capacitacion', N'Equivalencia',
+                N'Sabatico', N'CargoAutoridad', N'Obra', N'Proyecto', N'Otro')),
+        Descripcion   NVARCHAR(300) NOT NULL,
+        NombreArchivo NVARCHAR(200) NOT NULL,
+        Contenido     VARBINARY(MAX) NOT NULL,
+        Hash          CHAR(64) NOT NULL,
+        Tamano        INT NOT NULL,
+        SubidoPorId   INT NOT NULL CONSTRAINT FK_EvidenciasSolicitud_SubidoPor REFERENCES dbo.Usuarios (Id),
+        FechaSubida   DATETIME2 NOT NULL CONSTRAINT DF_EvidenciasSolicitud_Fecha DEFAULT SYSUTCDATETIME()
+    );
+    CREATE INDEX IX_EvidenciasSolicitud_Solicitud ON dbo.EvidenciasSolicitud (SolicitudId);
+END
+GO
+
+-- Tipos de documento revisables: se agregan proyectos, trabajos de titulación, equivalencias y evidencias
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_RevisionesDocumento_Tipo' AND definition NOT LIKE '%Evidencia%')
+BEGIN
+    ALTER TABLE dbo.RevisionesDocumento DROP CONSTRAINT CK_RevisionesDocumento_Tipo;
+    ALTER TABLE dbo.RevisionesDocumento ADD CONSTRAINT CK_RevisionesDocumento_Tipo CHECK (TipoDocumento IN
+        (N'TiempoRol', N'Obra', N'Evaluacion', N'Investigacion', N'Curso', N'Proyecto', N'TrabajoTitulacion', N'Equivalencia', N'Evidencia'));
+END
+GO
