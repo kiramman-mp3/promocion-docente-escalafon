@@ -24,27 +24,31 @@ namespace ApiREST_UTA.Application.Services
         {
             var usuario = _repo.GetByCorreo(request.Correo);
 
-            if (usuario == null || !BCrypt.Net.BCrypt.Verify(request.Contrasena, usuario.Contrasena))
+            if (usuario == null || !usuario.Activo || !BCrypt.Net.BCrypt.Verify(request.Contrasena, usuario.Contrasena))
                 return null;
 
             var token = GenerarToken(usuario);
             return new LoginResponse
             {
                 Token = token,
+                Id = usuario.Id,
                 NombreCompleto = $"{usuario.Nombre} {usuario.Apellido}",
                 Correo = usuario.Correo,
-                Rol = usuario.Rol
+                Rol = usuario.Rol,
+                Cedula = usuario.Cedula
             };
         }
 
         private string GenerarToken(Usuario usuario)
         {
-            var claims = new[]
+            var claims = new List<Claim>
             {
                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                new Claim(ClaimTypes.Name, usuario.Correo),
                new Claim(ClaimTypes.Role, usuario.Rol)
             };
+            if (!string.IsNullOrWhiteSpace(usuario.Cedula))
+                claims.Add(new Claim(ClaimsUsuario.Cedula, usuario.Cedula));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
