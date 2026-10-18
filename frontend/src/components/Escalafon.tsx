@@ -11,7 +11,10 @@ interface Props {
 const ALTO_PELDANO = 56;
 
 export function Escalafon({ roles, rolActualId, alcanzaObjetivo = false }: Props) {
-  const objetivoId = rolActualId && rolActualId < Math.max(...roles.map((r) => r.id)) ? rolActualId + 1 : undefined;
+  // Solo hay rol objetivo si el grado actual tiene promoción (CES art. 76: Agregado 3 y Principal 3 no la tienen)
+  const rolActual = roles.find((r) => r.id === rolActualId);
+  const objetivoId = rolActual?.promocionable ? rolActual.id + 1 : undefined;
+  const porConcurso = rolActual && !rolActual.promocionable && roles.some((r) => r.id === rolActual.id + 1);
 
   // El riel se rellena hasta el rol actual y, si cumple, sube al objetivo después de un instante.
   const [subido, setSubido] = useState(false);
@@ -55,6 +58,9 @@ export function Escalafon({ roles, rolActualId, alcanzaObjetivo = false }: Props
               {estado === "actual" && <span className="peldano__nota">Rol actual</span>}
               {(estado === "objetivo" || estado === "alcanzado") && (
                 <span className="peldano__nota">{estado === "alcanzado" ? "Puede ascender" : "Siguiente rol"}</span>
+              )}
+              {porConcurso && rolActual && rol.id === rolActual.id + 1 && (
+                <span className="peldano__nota">Por concurso de méritos</span>
               )}
             </li>
           );

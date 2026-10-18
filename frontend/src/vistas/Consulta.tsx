@@ -6,7 +6,7 @@ import { PanelSolicitud } from "../components/PanelSolicitud";
 import { useSesion } from "../sesion";
 import { cumpleTodo, useExpediente } from "../useExpediente";
 
-const CEDULAS_DE_PRUEBA = ["1801234567", "1809876543", "1712345678"];
+const CEDULAS_DE_PRUEBA = ["1801234567", "1809876543", "1712345678", "1805555555", "1701111111"];
 
 // RRHH y Administrador: buscan cualquier docente por cédula.
 export function Consulta() {
@@ -23,7 +23,7 @@ export function Consulta() {
   return (
     <div className="tablero">
       <aside className="tablero__escalera">
-        <Escalafon roles={roles} rolActualId={expediente?.rolActualId} alcanzaObjetivo={cumpleTodo(expediente)} />
+        <Escalafon roles={roles} rolActualId={expediente?.dictamen?.rolActualId} alcanzaObjetivo={cumpleTodo(expediente?.dictamen)} />
       </aside>
 
       <main className="tablero__contenido">
@@ -83,7 +83,7 @@ export function Consulta() {
 
           {expediente && (
             <div className={cargando ? "resultado resultado--cargando" : "resultado"}>
-              <Dictamen expediente={expediente} />
+              <Dictamen dictamen={expediente.dictamen} error={expediente.errorDictamen} />
               <PanelSolicitud expediente={expediente} />
               <Evidencia expediente={expediente} />
             </div>
