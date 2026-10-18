@@ -19,5 +19,7 @@ namespace ApiREST_UTA.Domain.Entities
         public string? ResueltoPor { get; set; }
         public DateTime? FechaResolucion { get; set; }
         public string? Observacion { get; set; }
+        public int? RequisitosPromocionId { get; set; }
+        public string? DictamenJson { get; set; }
     }
 }
