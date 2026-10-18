@@ -24,7 +24,7 @@ namespace ApiREST_UTA.Application.Services
         {
             var usuario = _repo.GetByCorreo(request.Correo);
 
-            if (usuario == null || usuario.Contrasena != request.Contrasena)
+            if (usuario == null || !BCrypt.Net.BCrypt.Verify(request.Contrasena, usuario.Contrasena))
                 return null;
 
             var token = GenerarToken(usuario);
