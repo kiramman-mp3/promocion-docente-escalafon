@@ -77,6 +77,7 @@ namespace ApiREST_UTA
             builder.Services.AddScoped<ProyectoPonderadoService>();
             builder.Services.AddScoped<CapacitacionImpartidaService>();
             builder.Services.AddScoped<SolicitudService>();
+            builder.Services.AddScoped<UsuarioService>();
             builder.Services.AddScoped<AuthService>(sp =>
                 new AuthService(sp.GetRequiredService<IUsuarioRepository>(), jwtKey));
 
