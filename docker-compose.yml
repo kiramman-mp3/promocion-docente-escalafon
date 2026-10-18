@@ -39,5 +39,24 @@ services:
       - ./docker/init-db.sh:/docker/init-db.sh:ro
     restart: "no"
 
+  api:
+    build: ./ApiREST_UTA
+    container_name: uta-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      DB_HOST: sqlserver
+      DB_PORT: "1433"
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      JWT_KEY: ${JWT_KEY:?Define JWT_KEY en .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+    ports:
+      - "${API_PORT:-5270}:8080"
+    restart: unless-stopped
+
 volumes:
   sqlserver-data:
