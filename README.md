@@ -1,104 +1,105 @@
 # Promoción docente – Escalafón UTA
 
-Sistema para revisar si un docente de la Universidad Técnica de Ambato cumple los requisitos para subir al siguiente rol del escalafón. Reúne la información de cinco direcciones (cada una es una base de datos):
+[![CI](https://github.com/kiramman-mp3/promocion-docente-escalafon/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/kiramman-mp3/promocion-docente-escalafon/actions/workflows/ci.yml)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
 
-| Base  | Contenido                                                          |
-|-------|--------------------------------------------------------------------|
-| DITIC | Usuarios del sistema (login)                                       |
-| RRHH  | Tiempo en el rol actual y catálogo de roles del escalafón          |
-| DIDE  | Obras publicadas, investigaciones y participación en proyectos     |
-| DEaDV | Cursos de capacitación, evaluaciones docentes, capacitación impartida |
-| DAC   | Tesis doctorales dirigidas                                         |
+Sistema para revisar si un docente de la Universidad Técnica de Ambato cumple los requisitos para subir al siguiente rol del escalafón y para gestionar la aprobación de su promoción.
+
+Reúne en un solo expediente lo que cada dirección guarda en su propia base de datos (RRHH, DIDE, DEaDV y DAC), calcula el dictamen automático y permite que RRHH apruebe o rechace cada documento antes de resolver la solicitud.
+
+## Funcionalidades
+
+- **Un login para tres roles**:
+  - **Docente**: ve solo su expediente y solicita su promoción.
+  - **RRHH**: revisa documentos y resuelve solicitudes.
+  - **Administrador**: hace lo mismo que RRHH y además gestiona usuarios.
+- **Expediente del docente**: tiempo en el rol, obras, evaluaciones, cursos, investigaciones, tesis y otros méritos, con visor de PDF.
+- **Dictamen automático** requisito por requisito y una escalera con el rol actual y el siguiente.
+- **Flujo de aprobación**:
+  - cada documento se aprueba o se rechaza con un motivo;
+  - una solicitud no se puede aprobar si tiene documentos rechazados.
+- **API REST** documentada con Swagger, autenticación JWT y contraseñas con BCrypt.
+
+## Puesta en marcha
+
+Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+git clone https://github.com/kiramman-mp3/promocion-docente-escalafon.git
+cd promocion-docente-escalafon
+cp .env.example .env          # cambia las contraseñas y JWT_KEY
+docker compose up -d --build
+```
+
+| Servicio | URL |
+|----------|-----|
+| Aplicación | http://localhost:8080 |
+| API | http://localhost:5270 |
+| Swagger | http://localhost:5270/swagger |
+| SQL Server | `localhost,1433` |
+
+### Usuarios de prueba
+
+Contraseña de todos: `Uta2026*`.
+
+| Correo | Rol | Situación |
+|--------|-----|-----------|
+| `admin@uta.edu.ec` | Administrador | |
+| `rrhh@uta.edu.ec` | RRHH | Tiene en su bandeja la solicitud pendiente de Ana |
+| `ana.perez@uta.edu.ec` | Docente | Agregado 1, cumple todo para Agregado 2 |
+| `carlos.gomez@uta.edu.ec` | Docente | Auxiliar 2, le faltan 4 requisitos para Agregado 1 |
+| `lucia.mora@uta.edu.ec` | Docente | Principal 1, le falta la tesis doctoral para Principal 2 |
+
+Para desarrollar sin contenedores (API con `dotnet run`, frontend con `npm run dev`), sigue la [guía de desarrollo](docs/desarrollo.md).
+
+## Tecnologías
+
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | React 18, TypeScript, Vite 5 |
+| API | ASP.NET Core 8, ADO.NET, JWT, BCrypt, Swashbuckle |
+| Base de datos | SQL Server 2022 (5 bases: DITIC, RRHH, DIDE, DEaDV, DAC) |
+| Pruebas | xUnit, Moq, Vitest, Testing Library, prueba de punta a punta con Docker Compose |
+| Calidad | `dotnet format`, ESLint, TypeScript estricto, GitHub Actions, Dependabot |
 
 ## Estructura
 
 ```
-ApiREST_UTA/   API REST .NET 8 (JWT, Swagger, CORS)
-frontend/      React + Vite + TypeScript
-database/      Scripts SQL: schema/, security/ (login de solo lectura), seed/ (datos de prueba)
-docker/        Script de inicialización de SQL Server
-docker-compose.yml
+ApiREST_UTA/          API REST .NET 8
+frontend/             Aplicación React
+database/             Scripts SQL: esquema, login de la API y datos de prueba
+docker/               Inicialización de SQL Server
+tests/                Pruebas de la API (xUnit) y de punta a punta
+docs/                 Documentación
+.github/              CI, Dependabot y plantillas de issues y PR
+docker-compose.yml    SQL Server + API + frontend
+PromocionDocente.sln  Solución de la API y sus pruebas
 ```
 
-## Puesta en marcha con Docker (recomendado)
-
-Requisitos: Docker Desktop.
+## Pruebas
 
 ```bash
-cp .env.example .env      # y cambia las contraseñas y JWT_KEY
-docker compose up -d --build
+dotnet test PromocionDocente.sln                     # API: 46 pruebas
+cd frontend && npm test                              # frontend: 32 pruebas
+docker compose down -v && docker compose up -d --build && bash tests/e2e/api-smoke.sh   # punta a punta
 ```
 
-| Servicio   | URL                                   |
-|------------|---------------------------------------|
-| Frontend   | http://localhost:8080                 |
-| API        | http://localhost:5270                 |
-| Swagger    | http://localhost:5270/swagger         |
-| SQL Server | `localhost,1433` (usuario `sa`)       |
+GitHub Actions ejecuta lint, pruebas, build y la prueba de punta a punta en cada push y pull request a `main` y `develop`. Detalles en [docs/pruebas.md](docs/pruebas.md).
 
-El contenedor `db-init` crea las 5 bases, el login de solo lectura de la API y carga los datos de prueba. Los scripts son idempotentes: `docker compose run --rm db-init` los vuelve a aplicar sin duplicar datos. Para empezar de cero: `docker compose down -v`.
+## Documentación
 
-### Usuarios de prueba
+| | |
+|-|-|
+| [Arquitectura](docs/arquitectura.md) | [Roles y flujo de aprobación](docs/roles-y-flujo.md) |
+| [Referencia de la API](docs/api.md) | [Base de datos](docs/base-de-datos.md) |
+| [Frontend](docs/frontend.md) | [Guía de desarrollo](docs/desarrollo.md) |
+| [Pruebas y CI](docs/pruebas.md) | [Despliegue](docs/despliegue.md) |
+| [Seguridad](docs/seguridad.md) | [Problemas conocidos](docs/problemas-conocidos.md) |
 
-Todos usan la contraseña `Uta2026*`.
+## Contribuir
 
-| Correo                     | Rol           | Cédula     | Situación de prueba                                   |
-|----------------------------|---------------|------------|-------------------------------------------------------|
-| admin@uta.edu.ec           | Administrador | –          |                                                       |
-| rrhh@uta.edu.ec            | RRHH          | –          |                                                       |
-| ana.perez@uta.edu.ec       | Docente       | 1801234567 | Agregado 1, cumple todo para Agregado 2; tiene una solicitud pendiente |
-| carlos.gomez@uta.edu.ec    | Docente       | 1809876543 | Auxiliar 2, le faltan 4 requisitos para Agregado 1    |
-| lucia.mora@uta.edu.ec      | Docente       | 1712345678 | Principal 1, le falta tesis doctoral para Principal 2 |
+Lee [CONTRIBUTING.md](CONTRIBUTING.md): ramas `feature/*` desde `develop`, Conventional Commits y la CI en verde antes de integrar. Los cambios se registran en el [CHANGELOG](CHANGELOG.md). Para reportar vulnerabilidades, sigue [SECURITY.md](SECURITY.md).
 
-## Roles y flujo de aprobación
+## Licencia
 
-Todos los usuarios entran por el mismo login; lo que ven depende de su rol.
-
-| Rol           | Puede                                                                                       |
-|---------------|---------------------------------------------------------------------------------------------|
-| Docente       | Ver **solo su propio expediente** (la API rechaza otras cédulas) y solicitar su promoción. Ver el estado de sus solicitudes y el motivo de cada documento rechazado. |
-| RRHH          | Ver la bandeja de solicitudes, consultar cualquier docente, aprobar o rechazar cada documento del expediente y aprobar o rechazar la solicitud. |
-| Administrador | Todo lo de RRHH, más crear usuarios, cambiar su rol o cédula, activarlos o desactivarlos y restablecer contraseñas. |
-
-Reglas del flujo:
-
-1. Una cédula solo puede tener una solicitud **pendiente** a la vez, y no se puede volver a pedir una promoción ya aprobada.
-2. Rechazar un documento o una solicitud exige escribir el motivo, que el docente ve.
-3. Una solicitud no se puede aprobar mientras tenga documentos rechazados.
-4. Las solicitudes y revisiones se guardan en DITIC (`SolicitudesPromocion`, `RevisionesDocumento`). El login de la API solo puede escribir en esas tablas y en `Usuarios`; las bases de las demás direcciones siguen siendo de solo lectura. Por eso, al aprobar una promoción, **RRHH debe registrar el nuevo rol en su propio sistema**.
-
-Endpoints nuevos: `GET /api/roles`, `GET|POST /api/solicitudes`, `GET /api/solicitudes/{id}`, `PUT /api/solicitudes/{id}/documentos`, `PUT /api/solicitudes/{id}/resolucion`, `GET|POST /api/usuarios`, `PUT /api/usuarios/{id}`, `PUT /api/usuarios/{id}/contrasena`. Todos aparecen en Swagger.
-
-## Desarrollo local (sin contenedores para API y frontend)
-
-1. Levanta solo la base de datos: `docker compose up -d sqlserver db-init`
-2. API (requiere .NET 8 SDK). Lee el `.env` de la raíz automáticamente:
-   ```bash
-   cd ApiREST_UTA
-   dotnet run --launch-profile http     # http://localhost:5270/swagger
-   ```
-3. Frontend (requiere Node 20+):
-   ```bash
-   cd frontend
-   cp .env.example .env
-   npm install
-   npm run dev                         # http://localhost:5173
-   ```
-
-## Variables de entorno
-
-Todas viven en `.env` (ignorado por git). Ver `.env.example`.
-
-| Variable            | Uso                                                              |
-|---------------------|------------------------------------------------------------------|
-| `MSSQL_SA_PASSWORD` | Contraseña del administrador de SQL Server                       |
-| `APP_DB_USER` / `APP_DB_PASSWORD` | Login de solo lectura que usa la API              |
-| `DB_HOST` / `SQL_PORT` | Dónde encuentra la API a SQL Server al correr con `dotnet run` |
-| `JWT_KEY`           | Clave para firmar los tokens (mínimo 32 caracteres)              |
-| `CORS_ORIGINS`      | Orígenes del frontend permitidos, separados por coma             |
-| `SEED_DATA`         | `true` para cargar los datos de prueba                           |
-| `API_PORT` / `FRONTEND_PORT` | Puertos publicados por docker-compose                   |
-
-## Flujo de trabajo Git
-
-`main` (estable) ← `develop` ← `feature/*`, `fix/*`, `refactor/*`, `chore/*`, con Conventional Commits.
+[MIT](LICENSE) © 2026 kiramman-mp3

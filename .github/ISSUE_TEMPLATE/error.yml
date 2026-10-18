@@ -1,0 +1,37 @@
+name: Reportar un error
+description: Algo no funciona como debería
+labels: [bug]
+body:
+  - type: textarea
+    id: que-paso
+    attributes:
+      label: Qué pasó
+      description: Describe el error y qué esperabas que ocurriera.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+      placeholder: |
+        1. Ingresar como rrhh@uta.edu.ec
+        2. Abrir la solicitud 2
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: rol
+    attributes:
+      label: Rol con el que ocurre
+      options: [Docente, RRHH, Administrador, Sin sesión, No aplica]
+  - type: dropdown
+    id: componente
+    attributes:
+      label: Componente
+      options: [Frontend, API, Base de datos, Docker, CI, Documentación]
+  - type: textarea
+    id: registros
+    attributes:
+      label: Mensajes de error o registros
+      description: Respuesta de la API, consola del navegador o `docker compose logs`. No incluyas contraseñas ni tokens.
+      render: shell
