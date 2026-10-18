@@ -10,7 +10,8 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             SELECT s.Id, s.Cedula, s.RolActualId, s.RolActual, s.RolObjetivo, s.Estado,
                    s.SolicitadoPorId, CONCAT(us.Nombre, ' ', us.Apellido) AS SolicitadoPor, s.FechaSolicitud,
                    s.RequisitosPromocionId, s.DictamenJson, s.FechaEnvioComision, s.EnviadaComisionPorId, s.NumeroResolucion,
-                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion
+                   s.ResueltoPorId, CONCAT(ur.Nombre, ' ', ur.Apellido) AS ResueltoPor, s.FechaResolucion, s.Observacion,
+                   s.ActoHash, s.AccionPersonalNumero, s.AccionPersonalFecha, s.EjecutadaPorId, s.FechaEjecucion
             FROM SolicitudesPromocion s
             JOIN Usuarios us ON us.Id = s.SolicitadoPorId
             LEFT JOIN Usuarios ur ON ur.Id = s.ResueltoPorId";
@@ -176,6 +177,46 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             return await command.ExecuteNonQueryAsync() == 1;
         }
 
+        public async Task GuardarActoAsync(int id, byte[] pdf, string hash)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand("UPDATE SolicitudesPromocion SET ActoPdf = @pdf, ActoHash = @hash WHERE Id = @id", connection);
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.Add("@pdf", System.Data.SqlDbType.VarBinary, -1).Value = pdf;
+            command.Parameters.AddWithValue("@hash", hash);
+
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
+        }
+
+        public async Task<byte[]?> ObtenerActoAsync(int id)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand("SELECT ActoPdf FROM SolicitudesPromocion WHERE Id = @id", connection);
+            command.Parameters.AddWithValue("@id", id);
+
+            await connection.OpenAsync();
+            var resultado = await command.ExecuteScalarAsync();
+            return resultado is byte[] pdf ? pdf : null;
+        }
+
+        public async Task<bool> RegistrarAccionPersonalAsync(int id, string numero, DateTime fecha, int usuarioId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var command = new SqlCommand(@"
+                UPDATE SolicitudesPromocion
+                SET Estado = 'Ejecutada', AccionPersonalNumero = @numero, AccionPersonalFecha = @fecha,
+                    EjecutadaPorId = @usuarioId, FechaEjecucion = SYSUTCDATETIME()
+                WHERE Id = @id AND Estado = 'Aprobada'", connection);
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.AddWithValue("@numero", numero);
+            command.Parameters.AddWithValue("@fecha", fecha.Date);
+            command.Parameters.AddWithValue("@usuarioId", usuarioId);
+
+            await connection.OpenAsync();
+            return await command.ExecuteNonQueryAsync() == 1;
+        }
+
         // Las fechas se guardan con SYSUTCDATETIME(): marcarlas como UTC para que el JSON lleve la "Z"
         private static DateTime ComoUtc(object valor) =>
             DateTime.SpecifyKind(Convert.ToDateTime(valor), DateTimeKind.Utc);
@@ -207,7 +248,12 @@ namespace ApiREST_UTA.Infrastructure.Repositories
                 ResueltoPorId = Entero("ResueltoPorId"),
                 ResueltoPor = reader["ResueltoPorId"] == DBNull.Value ? null : Texto("ResueltoPor"),
                 FechaResolucion = ComoUtcOpcional(reader["FechaResolucion"]),
-                Observacion = Texto("Observacion")
+                Observacion = Texto("Observacion"),
+                ActoHash = Texto("ActoHash"),
+                AccionPersonalNumero = Texto("AccionPersonalNumero"),
+                AccionPersonalFecha = reader["AccionPersonalFecha"] == DBNull.Value ? null : Convert.ToDateTime(reader["AccionPersonalFecha"]),
+                EjecutadaPorId = Entero("EjecutadaPorId"),
+                FechaEjecucion = ComoUtcOpcional(reader["FechaEjecucion"])
             };
         }
     }
