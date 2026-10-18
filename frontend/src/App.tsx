@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { listarRoles } from "./api";
-import { Cabecera, seccionesDe } from "./components/Cabecera";
+import { Cabecera } from "./components/Cabecera";
 import { Login } from "./components/Login";
-import { enlace, useRuta, type Ruta } from "./ruta";
-import { ProveedorSesion } from "./sesion";
+import { enlace, useRuta } from "./ruta";
+import { rutaPermitida, seccionesDe } from "./secciones";
+import { ContextoSesion } from "./sesion";
 import type { RolEscalafon, Sesion } from "./types";
 import { Consulta } from "./vistas/Consulta";
 import { MiExpediente } from "./vistas/MiExpediente";
@@ -21,23 +22,6 @@ function leerSesion(): Sesion | null {
     return sesion?.rol ? sesion : null;
   } catch {
     return null;
-  }
-}
-
-// Qué vistas puede abrir cada rol (la API vuelve a validar los permisos)
-function permitida(ruta: Ruta, sesion: Sesion) {
-  switch (ruta.vista) {
-    case "expediente":
-      return sesion.rol === "Docente";
-    case "consulta":
-      return sesion.rol !== "Docente";
-    case "usuarios":
-      return sesion.rol === "Administrador";
-    case "solicitudes":
-    case "solicitud":
-      return true;
-    default:
-      return false;
   }
 }
 
@@ -66,7 +50,7 @@ export default function App() {
 
   // Cada rol aterriza en su primera sección; rutas no permitidas también vuelven ahí
   useEffect(() => {
-    if (sesion && !permitida(ruta, sesion)) {
+    if (sesion && !rutaPermitida(ruta, sesion)) {
       window.location.replace(enlace(seccionesDe(sesion.rol)[0].ruta));
     }
   }, [ruta, sesion]);
@@ -79,7 +63,7 @@ export default function App() {
   if (!sesion || !contexto) return <Login roles={roles} errorRoles={errorRoles} onSesion={guardar} />;
 
   return (
-    <ProveedorSesion valor={contexto}>
+    <ContextoSesion.Provider value={contexto}>
       <div className="app">
         <Cabecera ruta={ruta} />
         {errorRoles && (
@@ -87,7 +71,7 @@ export default function App() {
             {errorRoles}
           </p>
         )}
-        {permitida(ruta, sesion) && (
+        {rutaPermitida(ruta, sesion) && (
           <>
             {ruta.vista === "expediente" && <MiExpediente />}
             {ruta.vista === "consulta" && <Consulta />}
@@ -97,6 +81,6 @@ export default function App() {
           </>
         )}
       </div>
-    </ProveedorSesion>
+    </ContextoSesion.Provider>
   );
 }

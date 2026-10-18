@@ -18,7 +18,7 @@ namespace ApiREST_UTA.API.Controllers
         private readonly IObraRepository _obraRepo;
         private readonly ICursoRepository _cursoRepo;
         private readonly IInvestigacionRepository _investigacionRepo;
-        private readonly IEvaluacionDocenteRepository _evaluacionRepo; 
+        private readonly IEvaluacionDocenteRepository _evaluacionRepo;
         private readonly ITesisRepository _tesisRepo;
         private readonly IObraIdiomaRepository _obraIdiomaRepo;
         private readonly IProyectoPonderadoRepository _proyectoRepo;

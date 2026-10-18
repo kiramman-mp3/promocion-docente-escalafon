@@ -1,21 +1,18 @@
-import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext } from "react";
 import { ApiError } from "./api";
 import type { RolEscalafon, Sesion } from "./types";
 
-interface ContextoSesion {
+export interface DatosSesion {
   sesion: Sesion;
   roles: RolEscalafon[];
   salir: () => void;
 }
 
-const Contexto = createContext<ContextoSesion | null>(null);
-
-export function ProveedorSesion({ valor, children }: { valor: ContextoSesion; children: ReactNode }) {
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
-}
+// App.tsx lo provee con <ContextoSesion.Provider> una vez iniciada la sesión
+export const ContextoSesion = createContext<DatosSesion | null>(null);
 
 export function useSesion() {
-  const ctx = useContext(Contexto);
+  const ctx = useContext(ContextoSesion);
   if (!ctx) throw new Error("useSesion debe usarse dentro de ProveedorSesion");
 
   const esRevisor = ctx.sesion.rol === "Administrador" || ctx.sesion.rol === "RRHH";
