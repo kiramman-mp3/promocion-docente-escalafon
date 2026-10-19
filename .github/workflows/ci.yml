@@ -44,7 +44,7 @@ jobs:
 
       - name: Publicar resultados
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: resultados-api
           path: TestResults
@@ -81,7 +81,7 @@ jobs:
 
       - name: Publicar cobertura
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cobertura-frontend
           path: frontend/coverage
@@ -125,7 +125,7 @@ jobs:
 
       - name: Publicar informes de seguridad
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: seguridad-zap
           path: zap/*.html
