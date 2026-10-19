@@ -18,7 +18,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             var investigaciones = new List<Investigacion>();
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("SELECT Cedula, Nombre, Encargado, Horas, Pdf FROM Investigaciones WHERE Cedula = @Cedula", connection);
+            var command = new SqlCommand("SELECT Id, Cedula, Nombre, Encargado, Horas, Pdf FROM Investigaciones WHERE Cedula = @Cedula", connection);
             command.Parameters.AddWithValue("@Cedula", cedula);
 
             await connection.OpenAsync();
@@ -27,6 +27,7 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 investigaciones.Add(new Investigacion
                 {
+                    Id = Convert.ToInt32(reader["Id"]),
                     Cedula = reader["Cedula"].ToString(),
                     Nombre = reader["Nombre"].ToString(),
                     Encargado = reader["Encargado"].ToString(),

@@ -1,0 +1,1585 @@
+:root {
+  --papel: #f6f7f5;
+  --superficie: #ffffff;
+  --tinta: #1d2633;
+  --tinta-suave: #556070;
+  --granate: #7a1f2b;
+  --granate-claro: #f3e6e8;
+  --verde: #2e6b4e;
+  --verde-claro: #e5f0ea;
+  --oxido: #b04a1e;
+  --oxido-claro: #f8ebe4;
+  --linea: #d8dce1;
+
+  --serif: "Literata", Georgia, serif;
+  --sans: "Public Sans", system-ui, sans-serif;
+
+  /* Escala modular 1.25 */
+  --t-0: 0.8rem;
+  --t-1: 1rem;
+  --t-2: 1.25rem;
+  --t-3: 1.563rem;
+  --t-4: 1.953rem;
+  --t-5: 2.441rem;
+  --t-6: 3.052rem;
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: var(--t-1);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+:focus-visible {
+  outline: 3px solid var(--granate);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.marca {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: var(--t-1);
+  color: var(--granate);
+}
+
+/* ---------- Controles ---------- */
+
+.campo {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.campo__etiqueta {
+  font-size: var(--t-0);
+  font-weight: 600;
+  color: var(--tinta-suave);
+}
+
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  background: var(--superficie);
+  font-size: var(--t-1);
+}
+
+.campo input:hover,
+.campo select:hover,
+.campo textarea:hover {
+  border-color: #b9bfc8;
+}
+
+.campo input:focus-visible,
+.campo select:focus-visible,
+.campo textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--granate);
+}
+
+.boton {
+  padding: 0.72rem 1.3rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--granate);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.boton:hover:not(:disabled) {
+  background: #5f1621;
+}
+
+.boton:disabled {
+  background: #b9a3a7;
+  cursor: not-allowed;
+}
+
+.boton-texto {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--granate);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.boton-pdf {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  background: var(--superficie);
+  font-size: var(--t-0);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boton-pdf:hover {
+  border-color: var(--granate);
+  color: var(--granate);
+}
+
+.alerta {
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--oxido);
+  background: var(--oxido-claro);
+  color: #7a3112;
+}
+
+/* ---------- Escalafón (la escalera) ---------- */
+
+.escalafon__titulo {
+  margin-bottom: 1rem;
+  font-family: var(--serif);
+  font-size: var(--t-2);
+  font-weight: 600;
+}
+
+.escalafon__lista {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.escalafon__riel {
+  position: absolute;
+  top: calc(var(--alto-peldano) / 2);
+  bottom: calc(var(--alto-peldano) / 2);
+  left: 9px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--linea);
+}
+
+.escalafon__relleno {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--granate);
+  transition: height 900ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+
+.peldano {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 0.9rem;
+  align-items: center;
+  height: var(--alto-peldano);
+}
+
+.peldano__punto {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--linea);
+  border-radius: 50%;
+  background: var(--papel);
+  transition: background-color 300ms ease, border-color 300ms ease;
+}
+
+.peldano__nombre {
+  font-size: var(--t-1);
+  color: var(--tinta-suave);
+}
+
+.peldano__nota {
+  grid-column: 2;
+  margin-top: -0.35rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.peldano:has(.peldano__nota) {
+  align-content: center;
+}
+
+.peldano--recorrido .peldano__punto {
+  border-color: var(--granate);
+  background: var(--granate);
+  transform: scale(0.6);
+}
+
+.peldano--actual .peldano__punto {
+  border-color: var(--granate);
+  background: var(--granate);
+  box-shadow: 0 0 0 5px var(--granate-claro);
+}
+
+.peldano--actual .peldano__nombre,
+.peldano--objetivo .peldano__nombre,
+.peldano--alcanzado .peldano__nombre {
+  font-family: var(--serif);
+  font-size: var(--t-2);
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.peldano--objetivo .peldano__punto {
+  border-style: dashed;
+  border-color: var(--granate);
+}
+
+.peldano--alcanzado .peldano__punto {
+  border-color: var(--verde);
+  background: var(--verde);
+  box-shadow: 0 0 0 5px var(--verde-claro);
+}
+
+.peldano--alcanzado .peldano__nota {
+  color: var(--verde);
+  font-weight: 600;
+}
+
+/* ---------- Login ---------- */
+
+.login {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 30rem);
+  gap: clamp(2rem, 8vw, 7rem);
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 3rem 1.5rem;
+}
+
+.login__escalera {
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--linea);
+  opacity: 0.9;
+}
+
+.login__titulo {
+  margin: 0.4rem 0 1rem;
+  font-family: var(--serif);
+  font-size: var(--t-6);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.login__intro {
+  max-width: 34em;
+  margin-bottom: 2rem;
+  color: var(--tinta-suave);
+}
+
+.formulario {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.formulario .boton {
+  justify-self: start;
+  margin-top: 0.3rem;
+}
+
+.login__ayuda {
+  margin-top: 1.75rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+/* ---------- App ---------- */
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--linea);
+  background: var(--superficie);
+}
+
+.cabecera__usuario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  font-size: var(--t-0);
+}
+
+.cabecera__rol {
+  color: var(--tinta-suave);
+}
+
+.tablero {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+.tablero__escalera {
+  position: sticky;
+  top: 2rem;
+  align-self: start;
+}
+
+.tablero__contenido {
+  min-width: 0;
+}
+
+.busqueda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  padding-bottom: 2rem;
+  margin-bottom: 2.25rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.busqueda__campo {
+  flex: 0 1 18rem;
+}
+
+.busqueda__campo input {
+  font-family: var(--serif);
+  font-size: var(--t-2);
+  letter-spacing: 0.06em;
+  padding-block: 0.5rem;
+}
+
+.busqueda__ayuda {
+  flex-basis: 100%;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.inicio {
+  max-width: 36em;
+}
+
+.inicio__titulo {
+  margin-bottom: 0.75rem;
+  font-family: var(--serif);
+  font-size: var(--t-5);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.inicio p {
+  color: var(--tinta-suave);
+}
+
+.resultado {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3rem;
+  transition: opacity 150ms ease;
+}
+
+.resultado--cargando {
+  opacity: 0.45;
+}
+
+/* ---------- Dictamen ---------- */
+
+.dictamen__contexto {
+  margin-bottom: 0.5rem;
+  color: var(--tinta-suave);
+}
+
+.dictamen__veredicto {
+  max-width: 22em;
+  margin-bottom: 1.75rem;
+  font-family: var(--serif);
+  font-size: var(--t-5);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.dictamen__veredicto--cumple {
+  color: var(--verde);
+}
+
+.requisitos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linea);
+}
+
+.requisito {
+  display: grid;
+  grid-template-columns: 2rem minmax(10rem, 16rem) minmax(0, 1fr) auto;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.requisito__marca {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+}
+
+.requisito__marca svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.requisito--cumple .requisito__marca {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+.requisito--falta .requisito__marca {
+  background: var(--oxido-claro);
+  color: var(--oxido);
+}
+
+.requisito__nombre {
+  font-weight: 600;
+}
+
+.requisito__detalle {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--tinta-suave);
+}
+
+.requisito__articulo,
+.requisito__requerido,
+.requisito__nota,
+.tabla__secundario {
+  display: block;
+  font-size: var(--t-0);
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.requisito__valores {
+  color: var(--tinta);
+}
+
+.dictamen__norma {
+  margin-top: 1rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.aviso-norma {
+  max-width: 44em;
+  margin-bottom: 1rem;
+  padding: 0.6rem 1rem;
+  border-left: 4px solid #c99a2e;
+  background: #fdf3dc;
+  color: #5c3e00;
+}
+
+/* Dentro de una solicitud el dictamen automático apoya a la decisión humana */
+.dictamen--secundario .dictamen__veredicto {
+  font-size: var(--t-3);
+}
+
+.requisito__estado {
+  font-size: var(--t-0);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.requisito--cumple .requisito__estado {
+  color: var(--verde);
+}
+
+.requisito--falta .requisito__estado {
+  color: var(--oxido);
+}
+
+/* ---------- Evidencia ---------- */
+
+.evidencia__titulo {
+  margin-bottom: 1rem;
+  font-family: var(--serif);
+  font-size: var(--t-3);
+  font-weight: 600;
+}
+
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--linea);
+  scrollbar-width: thin;
+}
+
+.pestana {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--tinta-suave);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pestana:hover {
+  color: var(--tinta);
+}
+
+.pestana[aria-selected="true"] {
+  border-bottom-color: var(--granate);
+  color: var(--tinta);
+}
+
+.pestana__cantidad {
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #e9ecef;
+  font-size: var(--t-0);
+  text-align: center;
+}
+
+.pestana[aria-selected="true"] .pestana__cantidad {
+  background: var(--granate-claro);
+  color: var(--granate);
+}
+
+.evidencia__panel {
+  padding-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.evidencia__vacio {
+  padding: 1.5rem 0;
+  color: var(--tinta-suave);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th {
+  padding: 0.75rem 0.75rem 0.5rem 0;
+  font-size: var(--t-0);
+  font-weight: 600;
+  color: var(--tinta-suave);
+  text-align: left;
+}
+
+.tabla td {
+  padding: 0.7rem 0.75rem 0.7rem 0;
+  border-top: 1px solid var(--linea);
+  vertical-align: middle;
+}
+
+.tabla__fecha {
+  white-space: nowrap;
+}
+
+.tabla__num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+th.tabla__num {
+  text-align: right;
+}
+
+.tabla__accion {
+  width: 1%;
+  text-align: right;
+}
+
+.meritos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0;
+  margin: 0;
+}
+
+.meritos > div {
+  padding: 1rem 1rem 1rem 0;
+  border-top: 1px solid var(--linea);
+}
+
+.meritos dt {
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.meritos dd {
+  margin: 0.2rem 0 0;
+  font-family: var(--serif);
+  font-size: var(--t-3);
+  font-weight: 500;
+}
+
+.meritos__pdf dd {
+  font-family: var(--sans);
+  font-size: var(--t-1);
+  padding-top: 0.35rem;
+}
+
+/* ---------- Navegación por rol ---------- */
+
+.cabecera__fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2.5rem;
+  align-items: center;
+}
+
+.navegacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.navegacion__enlace {
+  padding: 0.35rem 0;
+  border-bottom: 2px solid transparent;
+  color: var(--tinta-suave);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navegacion__enlace:hover {
+  color: var(--tinta);
+}
+
+.navegacion__enlace[aria-current="page"] {
+  border-bottom-color: var(--granate);
+  color: var(--tinta);
+}
+
+.alerta--pagina {
+  max-width: 1200px;
+  margin: 1rem auto 0;
+}
+
+.cargando {
+  color: var(--tinta-suave);
+}
+
+.aviso {
+  padding: 0.6rem 1rem;
+  border-left: 4px solid var(--verde);
+  background: var(--verde-claro);
+  color: #1f4a36;
+}
+
+.migas {
+  margin-bottom: 1.25rem;
+  font-size: var(--t-0);
+}
+
+.migas a {
+  color: var(--granate);
+  font-weight: 600;
+}
+
+/* ---------- Páginas sin escalera (listas) ---------- */
+
+.pagina {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.5rem clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+.pagina__encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.pagina__encabezado .formulario-usuario {
+  flex-basis: 100%;
+}
+
+.pagina__titulo {
+  font-family: var(--serif);
+  font-size: var(--t-5);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.pagina > .pagina__titulo {
+  margin-bottom: 1.5rem;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.filtro {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta-suave);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filtro:hover {
+  border-color: var(--tinta-suave);
+}
+
+.filtro[aria-pressed="true"] {
+  border-color: var(--tinta);
+  background: var(--tinta);
+  color: #fff;
+}
+
+/* Contiene los .sr-only de las cabeceras: si no, desbordan la página en móvil */
+.tabla-contenedor,
+.evidencia__panel {
+  position: relative;
+}
+
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+.tabla__cedula {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+a.boton-pdf {
+  display: inline-block;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.etiqueta-estado {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: var(--t-0);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.etiqueta-estado--revisiondocumental,
+.etiqueta-estado--encomision {
+  background: #fdf3dc;
+  color: #7a5200;
+}
+
+.etiqueta-estado--apelada {
+  background: var(--granate-claro);
+  color: var(--granate);
+}
+
+.etiqueta-estado--ejecutada {
+  background: var(--verde);
+  color: #fff;
+}
+
+.etiqueta-estado--aprobada {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+.etiqueta-estado--rechazada {
+  background: var(--oxido-claro);
+  color: var(--oxido);
+}
+
+/* ---------- Solicitud y revisión ---------- */
+
+.panel-solicitud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--linea);
+  border-left: 4px solid var(--granate);
+  background: var(--superficie);
+}
+
+.panel-solicitud .alerta {
+  flex-basis: 100%;
+}
+
+.panel-solicitud a {
+  color: var(--granate);
+  font-weight: 600;
+}
+
+.panel-solicitud__titulo {
+  font-family: var(--serif);
+  font-size: var(--t-2);
+  font-weight: 600;
+}
+
+.panel-solicitud__texto {
+  color: var(--tinta-suave);
+}
+
+.encabezado-solicitud .dictamen__veredicto {
+  margin-bottom: 1rem;
+}
+
+/* Dentro de una solicitud el dictamen automático es apoyo, no el titular */
+.encabezado-solicitud ~ .dictamen .dictamen__veredicto {
+  font-size: var(--t-3);
+}
+
+.encabezado-solicitud__titulo--aprobada,
+.encabezado-solicitud__titulo--ejecutada {
+  color: var(--verde);
+}
+
+.encabezado-solicitud__titulo--rechazada {
+  color: var(--oxido);
+}
+
+.encabezado-solicitud__nota {
+  max-width: 40em;
+  color: var(--tinta-suave);
+}
+
+.resolucion-final {
+  max-width: 44em;
+  padding: 0.9rem 1.1rem;
+  border-left: 4px solid currentColor;
+}
+
+.resolucion-final--aprobada {
+  background: var(--verde-claro);
+  color: var(--verde);
+}
+
+.resolucion-final--rechazada {
+  background: var(--oxido-claro);
+  color: var(--oxido);
+}
+
+.resolucion-final p {
+  color: var(--tinta);
+}
+
+.resolucion-final__observacion {
+  margin-top: 0.35rem;
+  font-family: var(--serif);
+  font-size: var(--t-2);
+}
+
+.tabla__revision {
+  min-width: 13rem;
+}
+
+.revision {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.revision__estado {
+  font-size: var(--t-0);
+  font-weight: 600;
+}
+
+.revision__estado--pendiente {
+  color: var(--tinta-suave);
+}
+
+.revision__estado--aprobado {
+  color: var(--verde);
+}
+
+.revision__estado--rechazado {
+  color: var(--oxido);
+}
+
+.revision__motivo {
+  max-width: 22rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.revision__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+}
+
+.revision__rechazo {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.revision__rechazo input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  font-size: var(--t-0);
+}
+
+.revision__error {
+  font-size: var(--t-0);
+  color: var(--oxido);
+}
+
+.boton-chico {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  background: var(--superficie);
+  font-size: var(--t-0);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-chico:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boton-chico--aprobar:hover:not(:disabled) {
+  border-color: var(--verde);
+  color: var(--verde);
+}
+
+.boton-chico--rechazar:hover:not(:disabled) {
+  border-color: var(--oxido);
+  color: var(--oxido);
+}
+
+.meritos__pdf dd {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+
+.resolucion {
+  display: grid;
+  gap: 1rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--tinta);
+}
+
+.resolucion .evidencia__titulo {
+  margin-bottom: 0;
+}
+
+.resolucion__progreso {
+  max-width: 44em;
+}
+
+.resolucion__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+
+.boton--aprobar {
+  background: var(--verde);
+}
+
+.boton--aprobar:hover:not(:disabled) {
+  background: #22523b;
+}
+
+.boton--secundario {
+  border: 1px solid var(--oxido);
+  background: var(--superficie);
+  color: var(--oxido);
+}
+
+.boton--secundario:hover:not(:disabled) {
+  background: var(--oxido-claro);
+}
+
+/* ---------- Usuarios ---------- */
+
+.formulario-usuario {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--linea);
+  background: var(--superficie);
+}
+
+.formulario-usuario__campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.usuarios {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linea);
+}
+
+.usuario {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.usuario__resumen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8rem 7rem 19rem;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+}
+
+.usuario__nombre {
+  font-weight: 600;
+}
+
+.usuario__tu {
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.usuario__detalle {
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.usuario__estado {
+  font-size: var(--t-0);
+  font-weight: 600;
+  color: var(--verde);
+}
+
+.usuario__estado--inactivo {
+  color: var(--tinta-suave);
+}
+
+.usuario--inactivo .usuario__nombre,
+.usuario--inactivo .usuario__rol {
+  color: var(--tinta-suave);
+}
+
+.usuario__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  justify-content: flex-end;
+  font-size: var(--t-0);
+}
+
+.usuario__formulario {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+}
+
+.usuario__formulario--linea {
+  grid-template-columns: minmax(0, 20rem) auto;
+  align-items: end;
+  justify-content: start;
+}
+
+.login__ayuda ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+/* ---------- Comisión, resolución y operación ---------- */
+
+.app {
+  min-height: 100vh;
+}
+
+.pagina__intro {
+  max-width: 44em;
+  margin-bottom: 2rem;
+  color: var(--tinta-suave);
+}
+
+.bloque {
+  margin-bottom: 2.5rem;
+}
+
+.bloque__ayuda {
+  max-width: 44em;
+  margin-bottom: 1rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.tabla__fila--tenue td {
+  color: var(--tinta-suave);
+}
+
+.tabla__num--bajo {
+  color: var(--oxido);
+  font-weight: 600;
+}
+
+.tabla__detalle {
+  max-width: 24rem;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+  overflow-wrap: anywhere;
+}
+
+.marca-estado {
+  font-size: var(--t-0);
+  font-weight: 600;
+}
+
+.marca-estado--ok {
+  color: var(--verde);
+}
+
+.marca-estado--no {
+  color: var(--oxido);
+}
+
+.meritos .meritos__texto {
+  font-family: var(--sans);
+  font-size: var(--t-1);
+  padding-top: 0.35rem;
+}
+
+.lista-simple {
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linea);
+}
+
+.lista-simple > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.lista-simple__acciones {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.lista-simple__inactivo {
+  color: var(--tinta-suave);
+}
+
+.formulario-linea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-bottom: 1.5rem;
+}
+
+.formulario-linea .alerta {
+  flex-basis: 100%;
+}
+
+.campo--ancho {
+  flex: 1 1 18rem;
+}
+
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.opciones legend {
+  margin-bottom: 0.35rem;
+  padding: 0;
+}
+
+.opcion {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.opcion input {
+  accent-color: var(--granate);
+}
+
+.formulario-voto {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 40rem;
+  margin: 1.25rem 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--linea);
+  background: var(--superficie);
+}
+
+.formulario-voto .boton {
+  justify-self: start;
+}
+
+.grupo-documentos {
+  margin-bottom: 1.5rem;
+}
+
+.grupo-documentos__titulo {
+  margin: 0 0 0.5rem;
+  font-size: var(--t-1);
+  font-weight: 600;
+}
+
+.documentos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linea);
+}
+
+.documento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, auto);
+  gap: 0.5rem 1.5rem;
+  align-items: start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.documento__descripcion {
+  overflow-wrap: anywhere;
+}
+
+/* Cada voto lleva el color de su sentido en el borde: se lee la votación de un vistazo */
+.votos {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.voto {
+  display: grid;
+  grid-template-columns: minmax(10rem, 16rem) 7rem minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 0 0.75rem 0.9rem;
+  border-left: 4px solid var(--linea);
+  border-bottom: 1px solid var(--linea);
+}
+
+.voto--afavor {
+  border-left-color: var(--verde);
+}
+
+.voto--encontra {
+  border-left-color: var(--oxido);
+}
+
+.voto__quien {
+  font-weight: 600;
+}
+
+.voto__sentido {
+  font-weight: 600;
+}
+
+.voto--afavor .voto__sentido {
+  color: var(--verde);
+}
+
+.voto--encontra .voto__sentido {
+  color: var(--oxido);
+}
+
+.voto__motivo {
+  color: var(--tinta-suave);
+}
+
+.acto {
+  max-width: 44em;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--linea);
+  border-left: 4px solid var(--granate);
+  background: var(--superficie);
+}
+
+.acto__motivacion {
+  margin-top: 0.5rem;
+  font-family: var(--serif);
+  font-size: var(--t-2);
+}
+
+.acto__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  margin-top: 0.85rem;
+}
+
+.acto__huella {
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.apelacion {
+  max-width: 44em;
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Avance del trámite: es una secuencia real, por eso va numerada */
+.linea-tiempo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: paso;
+  font-size: var(--t-0);
+  color: var(--tinta-suave);
+}
+
+.linea-tiempo li {
+  counter-increment: paso;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-right: 1.25rem;
+}
+
+.linea-tiempo li::before {
+  content: counter(paso);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1.5px solid var(--linea);
+  border-radius: 50%;
+  font-weight: 600;
+}
+
+.linea-tiempo li.hecho {
+  color: var(--tinta);
+}
+
+.linea-tiempo li.hecho::before {
+  border-color: var(--verde);
+  background: var(--verde);
+  color: #fff;
+}
+
+.linea-tiempo li.actual {
+  color: var(--granate);
+  font-weight: 600;
+}
+
+.linea-tiempo li.actual::before {
+  border-color: var(--granate);
+}
+
+.barras {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 36rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barra {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr) 2.5rem;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.barra__nombre {
+  font-size: var(--t-0);
+}
+
+.barra__pista {
+  height: 0.6rem;
+  background: var(--linea);
+}
+
+.barra__relleno {
+  display: block;
+  height: 100%;
+  background: var(--granate);
+}
+
+.barra__valor {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.paginacion {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  font-size: var(--t-0);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 860px) {
+  .login {
+    grid-template-columns: minmax(0, 30rem);
+    align-content: start;
+  }
+
+  .login__escalera {
+    display: none;
+  }
+
+  .login__titulo {
+    font-size: var(--t-5);
+  }
+
+  .tablero {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 1.5rem;
+  }
+
+  .tablero__escalera {
+    position: static;
+    order: 2;
+  }
+
+  .dictamen__veredicto,
+  .inicio__titulo {
+    font-size: var(--t-4);
+  }
+
+  .requisito {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .requisito__detalle,
+  .requisito__estado {
+    grid-column: 2;
+  }
+
+  .pagina__titulo {
+    font-size: var(--t-4);
+  }
+
+  .usuario__resumen {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .usuario__acciones {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .usuario__formulario--linea {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .documento,
+  .voto {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .barra {
+    grid-template-columns: 7rem minmax(0, 1fr) 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

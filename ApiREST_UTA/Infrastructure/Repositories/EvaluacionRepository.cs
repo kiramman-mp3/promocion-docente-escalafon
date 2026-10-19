@@ -17,7 +17,9 @@ namespace ApiREST_UTA.Infrastructure.Repositories
         {
             var lista = new List<EvaluacionDocente>();
             using var connection = new SqlConnection(_connectionString);
-            var command = new SqlCommand("SELECT Cedula, Periodo, Universidad, Carrera, Puntaje, Pdf FROM EvaluacionesDocentes WHERE Cedula = @Cedula", connection);
+            var command = new SqlCommand(@"
+                SELECT Id, Cedula, Periodo, PeriodoAcademico, Universidad, Carrera, Puntaje, EjercioDocencia, Pdf
+                FROM EvaluacionesDocentes WHERE Cedula = @Cedula ORDER BY Periodo DESC", connection);
             command.Parameters.AddWithValue("@Cedula", cedula);
 
             await connection.OpenAsync();
@@ -26,11 +28,14 @@ namespace ApiREST_UTA.Infrastructure.Repositories
             {
                 lista.Add(new EvaluacionDocente
                 {
+                    Id = Convert.ToInt32(reader["Id"]),
                     Cedula = reader["Cedula"].ToString(),
                     Periodo = Convert.ToDateTime(reader["Periodo"]),
+                    PeriodoAcademico = reader["PeriodoAcademico"] == DBNull.Value ? null : reader["PeriodoAcademico"].ToString(),
                     Universidad = reader["Universidad"].ToString(),
                     Carrera = reader["Carrera"].ToString(),
                     Puntaje = Convert.ToDecimal(reader["Puntaje"]),
+                    EjercioDocencia = Convert.ToBoolean(reader["EjercioDocencia"]),
                     Pdf = (byte[])reader["Pdf"]
                 });
             }

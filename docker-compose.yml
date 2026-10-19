@@ -1,0 +1,110 @@
+name: promocion-docente
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: uta-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Define MSSQL_SA_PASSWORD en .env}
+    ports:
+      - "${SQL_PORT:-1433}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q 'SELECT 1' > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  # Contenedor de un solo uso: ejecuta los scripts de /database y termina.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: uta-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker/init-db.sh"]
+    environment:
+      DB_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER:?Define APP_DB_USER en .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Define APP_DB_PASSWORD en .env}
+      SEED_DATA: ${SEED_DATA:-true}
+    volumes:
+      - ./database:/database:ro
+      - ./docker/init-db.sh:/docker/init-db.sh:ro
+    restart: "no"
+
+  api:
+    build: ./ApiREST_UTA
+    container_name: uta-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      DB_HOST: sqlserver
+      DB_PORT: "1433"
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      JWT_KEY: ${JWT_KEY:?Define JWT_KEY en .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10}
+    ports:
+      - "${API_PORT:-5270}:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # El navegador llama a la API desde la máquina del usuario, por eso es localhost y no "api"
+        VITE_API_URL: http://localhost:${API_PORT:-5270}
+    container_name: uta-frontend
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  # Operación (perfil "operacion", no se levantan con docker compose up):
+  #   docker compose --profile operacion run --rm db-backup
+  #   docker compose --profile operacion run --rm -e BASE=DITIC db-restore
+  # Los respaldos quedan en /var/opt/mssql/backup dentro del volumen de SQL Server.
+  db-backup:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["operacion"]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker/backup-db.sh"]
+    environment:
+      DB_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      RETENCION_DIAS: ${RETENCION_DIAS:-30}
+    volumes:
+      - ./docker/backup-db.sh:/docker/backup-db.sh:ro
+    restart: "no"
+
+  db-restore:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["operacion"]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker/restore-db.sh"]
+    environment:
+      DB_HOST: sqlserver
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER}
+    volumes:
+      - ./docker/restore-db.sh:/docker/restore-db.sh:ro
+    restart: "no"
+
+volumes:
+  sqlserver-data:

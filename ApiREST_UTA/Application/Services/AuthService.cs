@@ -12,43 +12,54 @@ namespace ApiREST_UTA.Application.Services
     public class AuthService
     {
         private readonly IUsuarioRepository _repo;
+        private readonly IComisionRepository _comision;
         private readonly string _jwtKey;
 
-        public AuthService(IUsuarioRepository repo, string jwtKey)
+        public AuthService(IUsuarioRepository repo, IComisionRepository comision, string jwtKey)
         {
             _repo = repo;
+            _comision = comision;
             _jwtKey = jwtKey;
         }
 
-        public LoginResponse? Autenticar(LoginRequest request)
+        public async Task<LoginResponse?> AutenticarAsync(LoginRequest request)
         {
             var usuario = _repo.GetByCorreo(request.Correo);
 
-            if (usuario == null || usuario.Contrasena != request.Contrasena)
+            if (usuario == null || !usuario.Activo || !BCrypt.Net.BCrypt.Verify(request.Contrasena, usuario.Contrasena))
                 return null;
 
-            var token = GenerarToken(usuario);
+            // La pertenencia a la Comisión Académica viaja en el token (UTA art. 47)
+            var miembro = await _comision.ObtenerMiembroActivoPorUsuarioAsync(usuario.Id);
+            var token = GenerarToken(usuario, miembro != null);
             return new LoginResponse
             {
                 Token = token,
+                Id = usuario.Id,
                 NombreCompleto = $"{usuario.Nombre} {usuario.Apellido}",
                 Correo = usuario.Correo,
-                Rol = usuario.Rol
+                Rol = usuario.Rol,
+                Cedula = usuario.Cedula,
+                EsMiembroComision = miembro != null,
+                EsPresidenteComision = miembro?.EsPresidente ?? false,
+                CargoComision = miembro?.Cargo
             };
         }
 
-        private string GenerarToken(Usuario usuario)
+        private string GenerarToken(Usuario usuario, bool miembroComision)
         {
-            var claveJwt = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8";
-
-            var claims = new[]
+            var claims = new List<Claim>
             {
                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                new Claim(ClaimTypes.Name, usuario.Correo),
                new Claim(ClaimTypes.Role, usuario.Rol)
             };
+            if (!string.IsNullOrWhiteSpace(usuario.Cedula))
+                claims.Add(new Claim(ClaimsUsuario.Cedula, usuario.Cedula));
+            if (miembroComision)
+                claims.Add(new Claim(ClaimsUsuario.Comision, "true"));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(claveJwt));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
