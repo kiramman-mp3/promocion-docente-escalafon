@@ -14,7 +14,7 @@ jobs:
     name: Prueba de carga (k6)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Crear .env
         run: |
